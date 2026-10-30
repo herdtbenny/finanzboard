@@ -84,15 +84,16 @@ export default function Transactions({ transactions, accounts, balances, month, 
                 />
             </label>
 
-            <div className="flex flex-wrap items-center gap-2">
-                {!q && <MonthSwitch month={month} onChange={onMonth} />}
+            {/* Month and account side by side; the account pill takes the rest of the row */}
+            <div className="flex items-center gap-2">
+                {!q && <div className="shrink-0"><MonthSwitch month={month} onChange={onMonth} compact /></div>}
                 {accounts.length > 1 && (
-                    <label className={`relative flex items-center rounded-full border ${account ? 'border-ink bg-ink text-paper' : 'border-line bg-card'}`}>
+                    <label className={`relative flex min-w-0 flex-1 items-center rounded-full border ${account ? 'border-ink bg-ink text-paper' : 'border-line bg-card'}`}>
                         <select
                             value={account || ''}
                             onChange={(e) => { onAccount(e.target.value || null); setShown(PAGE); }}
                             aria-label="Konto"
-                            className="appearance-none bg-transparent py-2.5 pr-9 pl-4 text-sm font-medium outline-none"
+                            className="w-full min-w-0 appearance-none truncate bg-transparent py-2.5 pr-8 pl-4 text-sm font-medium outline-none"
                         >
                             <option value="">Alle Konten</option>
                             {accounts.map((a) => <option key={a.id} value={a.id}>{a.name}</option>)}
@@ -100,14 +101,14 @@ export default function Transactions({ transactions, accounts, balances, month, 
                         <ChevronDown size={15} className="pointer-events-none absolute right-3" />
                     </label>
                 )}
-                {filter && !q && (
-                    <button onClick={onClearFilter} className="flex items-center gap-1.5 rounded-full bg-ink py-2.5 pr-3 pl-4 text-sm text-paper">
-                        {filter} <X size={14} />
-                    </button>
-                )}
             </div>
+            {filter && !q && (
+                <button onClick={onClearFilter} className="flex items-center gap-1.5 rounded-full bg-ink py-2 pr-3 pl-4 text-sm text-paper">
+                    {filter} <X size={14} />
+                </button>
+            )}
 
-            <p className="flex justify-between px-1 text-xs text-muted">
+            <p className="flex flex-wrap justify-between gap-x-3 gap-y-0.5 px-1 text-xs text-muted">
                 <span>{list.length} {list.length === 1 ? 'Eintrag' : 'Einträge'}{q ? ' gefunden' : ''} · Summe <span className="tabular">{money(total)}</span></span>
                 {account && <span>Kontostand <span className="tabular font-semibold text-ink">{money(balances[account])}</span></span>}
             </p>

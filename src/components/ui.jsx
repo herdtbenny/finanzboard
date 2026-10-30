@@ -28,14 +28,17 @@ export function PageTitle({ children, right }) {
     );
 }
 
-export function MonthSwitch({ month, onChange }) {
+// `compact` shortens the month ("Okt. 2026") where the row is shared.
+export function MonthSwitch({ month, onChange, compact }) {
     const btn = 'flex size-9 items-center justify-center rounded-full active:bg-ink/5 disabled:opacity-25';
     return (
         <div className="inline-flex items-center gap-1 rounded-full border border-line bg-card p-0.5">
             <button onClick={() => onChange(shiftMonth(month, -1))} aria-label="Vorheriger Monat" className={btn}>
                 <ChevronLeft size={17} />
             </button>
-            <span className="min-w-[7.5rem] text-center text-sm font-medium">{monthLabel(month)}</span>
+            <span className={`text-center text-sm font-medium ${compact ? 'min-w-[4.5rem]' : 'min-w-[7.5rem]'}`}>
+                {compact ? monthLabel(month, { month: 'short', year: 'numeric' }) : monthLabel(month)}
+            </span>
             <button onClick={() => onChange(shiftMonth(month, 1))} disabled={month >= currentMonth()} aria-label="Nächster Monat" className={btn}>
                 <ChevronRight size={17} />
             </button>
