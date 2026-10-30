@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { ChevronDown, Home, Wallet } from 'lucide-react';
 import { api, Unauthorized } from '../api.js';
-import { categoryMemory, categoryOf, categoryOptions } from '../shared/categories.js';
+import { categoryMemory, categoryOf, categoryOptions, setCustomCategories } from '../shared/categories.js';
 import { monthKey } from '../shared/format.js';
 import { balanceSeries, currentMonth } from '../shared/insights.js';
 import Overview from './Overview.jsx';
@@ -78,12 +78,25 @@ export default function Dashboard({ token, me, space, onSpace, onMeChanged, onLo
         });
     }
 
+    // Renaming or deleting changes transactions too, so reload everything.
+    async function saveCategory(c) {
+        await call('categories', { method: 'POST', body: c });
+        await load();
+    }
+
+    async function deleteCategory(id) {
+        await call(`categories?id=${encodeURIComponent(id)}`, { method: 'DELETE' });
+        await load();
+    }
+
     async function deleteAccount(id) {
         await call(`accounts?id=${encodeURIComponent(id)}`, { method: 'DELETE' });
         await load();
         if (account === id) setAccount(null);
     }
 
+    // Own categories first: icons, chips and refunds all depend on them.
+    setCustomCategories(data?.categories);
     const accounts = useMemo(() => data?.accounts || [], [data]);
     const transactions = useMemo(
         () => (data?.transactions || []).map((t) => ({ ...t, amount: Number(t.amount), category: categoryOf(t) })),
@@ -104,7 +117,8 @@ export default function Dashboard({ token, me, space, onSpace, onMeChanged, onLo
         return Object.keys(n).sort((a, b) => n[b] - n[a]).slice(0, 300);
     }, [transactions]);
     const memory = useMemo(() => categoryMemory(transactions), [transactions]);
-    const options = useMemo(() => ({ in: categoryOptions(transactions, 'in'), out: categoryOptions(transactions, 'out') }), [transactions]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    const options = useMemo(() => ({ in: categoryOptions(transactions, 'in'), out: categoryOptions(transactions, 'out') }), [transactions, data?.categories]);
 
     const pickMonth = (m) => { setMonth(m); setCategory(null); };
     const goTo = (t) => { setTab(t); window.scrollTo({ top: 0 }); };
@@ -145,7 +159,8 @@ export default function Dashboard({ token, me, space, onSpace, onMeChanged, onLo
         content = (
             <Accounts
                 token={token} me={me} onMeChanged={onMeChanged} accounts={accounts} balances={balances} transactions={transactions}
-                onSave={saveAccount} onDelete={deleteAccount} onSaveTransactions={saveTransactions} onLogout={onLogout}
+                categories={data.categories || []} onSave={saveAccount} onDelete={deleteAccount} onSaveTransactions={saveTransactions}
+                onSaveCategory={saveCategory} onDeleteCategory={deleteCategory} onLogout={onLogout}
             />
         );
     }

@@ -1,4 +1,4 @@
-// Default categories for every Haushalt. The form lists them sorted by how
+// Default categories for every Haushalt (each can add its own, see below). The form lists them sorted by how
 // often each was used; categories found in the data but missing here show up
 // there too.
 export const EXPENSE_CATEGORIES = [
@@ -6,6 +6,15 @@ export const EXPENSE_CATEGORIES = [
     'Shopping & Technik', 'Drogerie & Gesundheit', 'Sport & Freizeit', 'Urlaub', 'Geschenke', 'Sonstiges',
 ];
 export const INCOME_CATEGORIES = ['Gehalt & Jobs', 'Taschengeld', 'Familie', 'Verkäufe', 'Sonstiges'];
+
+// The Haushalt's own categories ({ id, name, kind: 'out' | 'in', icon }),
+// set once the data is loaded; everything below takes them into account.
+let custom = [];
+export function setCustomCategories(list) { custom = list || []; }
+export const customCategories = () => custom;
+const ownOf = (kind) => custom.filter((c) => c.kind === kind).map((c) => c.name);
+export const expenseCategories = () => [...EXPENSE_CATEGORIES.slice(0, -1), ...ownOf('out'), 'Sonstiges'];
+export const incomeCategories = () => [...INCOME_CATEGORIES.slice(0, -1), ...ownOf('in'), 'Sonstiges'];
 
 // Neither income nor expense: money moved between own accounts (Investieren
 // is a transfer into a depot), corrections that set an account to a known
@@ -15,7 +24,7 @@ export const isNeutral = (t) => NEUTRAL_CATEGORIES.includes(t.category);
 
 // Money coming back in an expense category (a refund, a friend paying their
 // share) lowers that category's spending instead of counting as income.
-export const isRefund = (t) => t.amount > 0 && !INCOME_CATEGORIES.includes(t.category) && !isNeutral(t);
+export const isRefund = (t) => t.amount > 0 && !incomeCategories().includes(t.category) && !isNeutral(t);
 
 // Keyword rules for names never used before, matched against counterparty +
 // purpose (case-insensitive; keywords up to 3 letters only as whole words).
@@ -82,7 +91,7 @@ export function categoryOptions(transactions, kind) {
         if (isNeutral(t) || (kind === 'out') !== (t.amount < 0)) continue;
         usage[t.category] = (usage[t.category] || 0) + 1;
     }
-    const defaults = kind === 'out' ? EXPENSE_CATEGORIES : INCOME_CATEGORIES;
+    const defaults = kind === 'out' ? expenseCategories() : incomeCategories();
     const sorted = [...new Set([...defaults, ...Object.keys(usage)])].sort((a, b) => (usage[b] || 0) - (usage[a] || 0));
-    return kind === 'out' ? sorted : [...new Set([...sorted, ...EXPENSE_CATEGORIES])];
+    return kind === 'out' ? sorted : [...new Set([...sorted, ...expenseCategories()])];
 }

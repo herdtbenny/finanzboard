@@ -7,8 +7,9 @@ import { exportCsv } from '../shared/exportCsv.js';
 import Sheet, { Field, inputClass } from './Sheet.jsx';
 import { Card, PageTitle } from './ui.jsx';
 import People, { Profile } from './People.jsx';
+import Categories from './Categories.jsx';
 
-export default function Accounts({ token, me, onMeChanged, accounts, balances, transactions, onSave, onDelete, onSaveTransactions, onLogout }) {
+export default function Accounts({ token, me, onMeChanged, accounts, balances, transactions, categories, onSave, onDelete, onSaveTransactions, onSaveCategory, onDeleteCategory, onLogout }) {
     const [editing, setEditing] = useState(null);
     const [valuing, setValuing] = useState(null);
     const counts = {};
@@ -46,6 +47,8 @@ export default function Accounts({ token, me, onMeChanged, accounts, balances, t
             <button onClick={() => setEditing({})} className="flex w-full items-center justify-center gap-2 rounded-full bg-ink py-3.5 font-medium text-paper">
                 <Plus size={18} /> Konto hinzufügen
             </button>
+
+            <Categories categories={categories} onSave={onSaveCategory} onDelete={onDeleteCategory} />
 
             <Profile token={token} me={me} />
             <FaceId token={token} />

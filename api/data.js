@@ -1,7 +1,8 @@
 import { ACCOUNT_COLUMNS, db, TRANSACTION_COLUMNS } from './_lib.js';
 import { bookDue } from './_recurring.js';
 
-// Everything of the picked Haushalt: accounts, transactions, standing orders.
+// Everything of the picked Haushalt: accounts, transactions, standing orders
+// and its own categories.
 // Due standing orders are booked first, so opening the app shows them right
 // away. Balances are computed in the browser, so this needs the full history.
 export default async function handler(req, res) {
@@ -28,11 +29,12 @@ export default async function handler(req, res) {
         if (data.length < 1000) break;
     }
 
-    const [accounts, recurrings] = await Promise.all([
+    const [accounts, recurrings, categories] = await Promise.all([
         client.from('accounts').select(ACCOUNT_COLUMNS).eq('space_id', spaceId).order('sort_order').order('created_at'),
         client.from('recurrings').select('*').eq('space_id', spaceId).order('created_at'),
+        client.from('categories').select('id,name,kind,icon').eq('space_id', spaceId).order('created_at'),
     ]);
     if (accounts.error) return res.status(500).json({ error: accounts.error.message });
 
-    res.status(200).json({ accounts: accounts.data, transactions, recurrings: recurrings.data || [] });
+    res.status(200).json({ accounts: accounts.data, transactions, recurrings: recurrings.data || [], categories: categories.data || [] });
 }
