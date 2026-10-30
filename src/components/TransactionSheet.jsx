@@ -41,10 +41,11 @@ export default function TransactionSheet({
 
     const transfer = kind === 'transfer';
     const value = parseAmount(amount);
-    const guess = memory[counterparty.trim().toLowerCase()] || categorize({ counterparty, purpose });
     // Only categories of the chosen direction; an existing entry keeps its own
     // (e.g. a refund booked under an expense category).
     const kindOptions = transfer ? [] : optionsFor(kind);
+    const remembered = memory[counterparty.trim().toLowerCase()];
+    const guess = kindOptions.includes(remembered) ? remembered : categorize({ counterparty, purpose }, kindOptions);
     const options = category && !kindOptions.includes(category) ? [...kindOptions, category] : kindOptions;
     const suggested = NEUTRAL_CATEGORIES.includes(guess) || !kindOptions.includes(guess) ? FALLBACK : guess;
     // A transfer into a depot account counts as investing.

@@ -58,14 +58,15 @@ function matchesWord(text, word) {
     return new RegExp(`(^|[^a-zäöüß])${escapeRe(word)}($|[^a-zäöüß])`).test(text);
 }
 
-// The first rule that matches, or null.
-export function ruleFor(text) {
+// The first rule that matches — among `allowed` categories if given (the
+// form only suggests income categories for income) — or null.
+export function ruleFor(text, allowed) {
     const lower = String(text || '').toLowerCase();
-    return CATEGORY_RULES.find((rule) => rule.match.some((word) => matchesWord(lower, word)))?.name || null;
+    return CATEGORY_RULES.find((rule) => (!allowed || allowed.includes(rule.name)) && rule.match.some((word) => matchesWord(lower, word)))?.name || null;
 }
 
-export function categorize(t) {
-    return ruleFor(`${t.counterparty || ''} ${t.purpose || ''}`) || FALLBACK;
+export function categorize(t, allowed) {
+    return ruleFor(`${t.counterparty || ''} ${t.purpose || ''}`, allowed) || FALLBACK;
 }
 
 export const categoryOf = (t) => t.category || categorize(t);
