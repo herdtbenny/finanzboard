@@ -2,6 +2,7 @@ import { useMemo, useState } from 'react';
 import { ArrowLeftRight, ChevronDown, Repeat, Search, TrendingUp, X } from 'lucide-react';
 import { CategoryIcon } from '../shared/categoryIcons.jsx';
 import { dayLabel, money, monthKey } from '../shared/format.js';
+import { isNeutral } from '../shared/categories.js';
 import { mergeTransfers, transferTitle } from '../shared/transfers.js';
 import { MonthSwitch, PageTitle } from './ui.jsx';
 
@@ -24,7 +25,8 @@ export function TransactionRow({ t, onOpen, showDate, names }) {
         showDate && dayLabel(t.booking_date),
         !isTransfer && names.__multi && names[t.account_id],
     ].filter(Boolean).join(' · ');
-    const amountClass = isHalf ? (t.amount > 0 ? 'text-income' : '') : isTransfer ? 'text-muted' : t.amount > 0 ? 'text-income' : '';
+    // Expenses red, income green; transfers and corrections stay grey.
+    const amountClass = isTransfer || isNeutral(t) ? 'text-muted' : t.amount > 0 ? 'text-income' : 'text-expense';
 
     return (
         <li>
@@ -60,6 +62,8 @@ export function accountNames(accounts) {
 // half of a transfer with its sign, plus the balance.
 export default function Transactions({ transactions, accounts, balances, month, onMonth, filter, onClearFilter, account, onAccount, onOpen }) {
     const [query, setQuery] = useState('');
+    // 'all' | 'out' | 'in'
+    const [type, setType] = useState('all');
     const [shown, setShown] = useState(PAGE);
     const names = accountNames(accounts);
     const q = query.toLowerCase().trim();
@@ -73,9 +77,11 @@ export default function Transactions({ transactions, accounts, balances, month, 
             .map((t) => (t.transfer_id && wholes[t.transfer_id] ? { ...t, whole: wholes[t.transfer_id] } : t));
     }, [transactions, account]);
     const list = useMemo(() => {
-        if (q) return base.filter((t) => `${t.counterparty} ${t.purpose} ${t.category} ${String(Math.abs(t.amount)).replace('.', ',')}`.toLowerCase().includes(q));
-        return base.filter((t) => monthKey(t.booking_date) === month && (!filter || t.category === filter));
-    }, [base, q, month, filter]);
+        // Transfers and corrections are neither; they only show under "Alle".
+        const ofType = (t) => type === 'all' || (!t.transfer && !t.whole && !isNeutral(t) && (type === 'in' ? t.amount > 0 : t.amount < 0));
+        if (q) return base.filter((t) => ofType(t) && `${t.counterparty} ${t.purpose} ${t.category} ${String(Math.abs(t.amount)).replace('.', ',')}`.toLowerCase().includes(q));
+        return base.filter((t) => ofType(t) && monthKey(t.booking_date) === month && (!filter || t.category === filter));
+    }, [base, q, month, filter, type]);
 
     const days = [];
     for (const t of list.slice(0, shown)) {
@@ -117,6 +123,18 @@ export default function Transactions({ transactions, accounts, balances, month, 
                         <ChevronDown size={15} className="pointer-events-none absolute right-3" />
                     </label>
                 )}
+            </div>
+            <div className="grid grid-cols-3 rounded-full border border-line bg-card p-1">
+                {[['all', 'Alle', 'bg-ink text-paper'], ['out', 'Ausgaben', 'bg-expense text-white'], ['in', 'Einnahmen', 'bg-income text-white']].map(([k, label, active]) => (
+                    <button
+                        key={k}
+                        onClick={() => { setType(k); setShown(PAGE); }}
+                        aria-pressed={type === k}
+                        className={`rounded-full py-1.5 text-sm font-medium transition-colors ${type === k ? active : 'text-muted'}`}
+                    >
+                        {label}
+                    </button>
+                ))}
             </div>
             {filter && !q && (
                 <button onClick={onClearFilter} className="flex items-center gap-1.5 rounded-full bg-ink py-2 pr-3 pl-4 text-sm text-paper">
