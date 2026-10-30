@@ -1,14 +1,29 @@
 {
+  "regions": [
+    "fra1"
+  ],
   "crons": [
-    { "path": "/api/keep-alive", "schedule": "0 6 * * *" }
+    {
+      "path": "/api/keep-alive",
+      "schedule": "0 6 * * *"
+    }
   ],
   "headers": [
     {
       "source": "/(.*)",
       "headers": [
-        { "key": "X-Robots-Tag", "value": "noindex, nofollow" },
-        { "key": "X-Frame-Options", "value": "DENY" },
-        { "key": "Referrer-Policy", "value": "no-referrer" }
+        {
+          "key": "X-Robots-Tag",
+          "value": "noindex, nofollow"
+        },
+        {
+          "key": "X-Frame-Options",
+          "value": "DENY"
+        },
+        {
+          "key": "Referrer-Policy",
+          "value": "no-referrer"
+        }
       ]
     }
   ]
