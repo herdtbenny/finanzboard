@@ -60,7 +60,7 @@ function newCategory(t) {
         if (name.includes('zins')) return 'Sonstiges';
         if (rule === 'Verkäufe' || name.includes('vint')) return 'Verkäufe';
         if (hasAny(name, REFUND) && isExpense(rule)) return rule;
-        if (hasAny(name, FAMILY)) return 'Familie';
+        if (hasAny(name, FAMILY)) return 'Taschengeld';
         return 'Sonstiges';
     }
     // Sonstiges, and the odd expense booked as Taschengeld.

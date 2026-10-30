@@ -31,7 +31,6 @@ const ICONS = {
     Sonstiges: Shapes,
     'Gehalt & Jobs': Briefcase,
     Taschengeld: PiggyBank,
-    Familie: Users,
     Verkäufe: Tag,
     Umbuchung: ArrowLeftRight,
     Investieren: TrendingUp,

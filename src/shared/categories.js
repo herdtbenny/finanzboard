@@ -5,7 +5,7 @@ export const EXPENSE_CATEGORIES = [
     'Lebensmittel', 'Essen gehen', 'Mobilität', 'Wohnen', 'Abos & Verträge', 'Versicherungen',
     'Shopping', 'Drogerie & Gesundheit', 'Sport & Freizeit', 'Urlaub', 'Geschenke', 'Sonstiges',
 ];
-export const INCOME_CATEGORIES = ['Gehalt & Jobs', 'Taschengeld', 'Familie', 'Verkäufe', 'Sonstiges'];
+export const INCOME_CATEGORIES = ['Gehalt & Jobs', 'Taschengeld', 'Verkäufe', 'Sonstiges'];
 
 // The Haushalt's own categories ({ id, name, kind: 'out' | 'in', icon }),
 // set once the data is loaded; everything below takes them into account.
@@ -33,7 +33,7 @@ export const CATEGORY_RULES = [
     { name: 'Umbuchung', match: ['umbuchung'] },
     { name: 'Investieren', match: ['sparplan', 'etf', 'msci', 'nasdaq', 's&p'] },
     { name: 'Gehalt & Jobs', match: ['gehalt', 'lohn', 'aushilf', 'minijob'] },
-    { name: 'Taschengeld', match: ['taschengeld'] },
+    { name: 'Taschengeld', match: ['taschengeld', 'oma', 'opa', 'mama', 'papa', 'eltern', 'geburtstag', 'finanzspritze'] },
     { name: 'Verkäufe', match: ['vinted', 'kleinanzeigen', 'verkauft'] },
     { name: 'Versicherungen', match: ['versicherung', 'kv', 'sbk', 'aok', 'haftpflicht', 'krankenkasse'] },
     { name: 'Abos & Verträge', match: ['icloud', 'freenet', 'klarmobil', 'handyvertrag', 'claude', 'chatgpt', 'spotify', 'netflix', 'disney', 'prime', 'moneystats', 'namecheap', 'abo'] },
