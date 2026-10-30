@@ -8,8 +8,9 @@ import { amountInput, money, newId, parseAmount } from '../shared/format.js';
 import { exportCsv } from '../shared/exportCsv.js';
 import Sheet, { Field, inputClass } from './Sheet.jsx';
 import { Card, CardHeader, PageTitle } from './ui.jsx';
+import People, { Profile } from './People.jsx';
 
-export default function Accounts({ token, accounts, balances, transactions, recurrings, onSave, onDelete, onOpenRecurring, onLogout }) {
+export default function Accounts({ token, me, onMeChanged, accounts, balances, transactions, recurrings, onSave, onDelete, onOpenRecurring, onLogout }) {
     const [editing, setEditing] = useState(null);
     const counts = {};
     for (const t of transactions) counts[t.account_id] = (counts[t.account_id] || 0) + 1;
@@ -44,7 +45,9 @@ export default function Accounts({ token, accounts, balances, transactions, recu
 
             <Recurrings recurrings={recurrings} accounts={accounts} onOpen={onOpenRecurring} />
 
+            <Profile token={token} me={me} />
             <FaceId token={token} />
+            {me.user.is_admin && <People token={token} me={me} onMeChanged={onMeChanged} />}
 
             <Card className="space-y-1 p-2">
                 <button onClick={() => exportCsv(transactions, accounts)} className="flex w-full items-center gap-3 rounded-full px-4 py-3 text-left text-sm font-medium active:bg-ink/5">

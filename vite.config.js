@@ -34,7 +34,9 @@ function localApi() {
                 try {
                     await handler(req, res);
                 } catch (e) {
-                    res.status(500).json({ error: e.message });
+                    // An error after the answer went out must not take the dev server down.
+                    if (res.headersSent) console.error(`[api/${name}]`, e);
+                    else res.status(500).json({ error: e.message });
                 }
             });
         },

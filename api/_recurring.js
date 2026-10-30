@@ -6,7 +6,7 @@ export { nextOccurrence, today };
 // The transactions one occurrence books: one row, or two for a transfer.
 export function bookingsFor(r, date) {
     const amount = Number(r.amount);
-    const base = { booking_date: date, purpose: r.purpose || null, recurring_id: r.id };
+    const base = { booking_date: date, purpose: r.purpose || null, recurring_id: r.id, space_id: r.space_id };
     if (r.kind === 'transfer') {
         const transfer = `rec-${r.id}-${date}`;
         const name = r.counterparty || 'Umbuchung';
@@ -25,10 +25,13 @@ export function bookingsFor(r, date) {
     }];
 }
 
-// Books every occurrence that is due and not booked yet. Safe to call often:
+// Books every occurrence that is due and not booked yet — of one Haushalt, or
+// of all when spaceId is left out (the daily cron). Safe to call often:
 // last_date moves forward, and the ids are fixed per occurrence.
-export async function bookDue(client) {
-    const { data: recurrings, error } = await client.from('recurrings').select('*');
+export async function bookDue(client, spaceId) {
+    let query = client.from('recurrings').select('*');
+    if (spaceId) query = query.eq('space_id', spaceId);
+    const { data: recurrings, error } = await query;
     if (error) throw error;
     const now = today();
     for (const r of recurrings) {

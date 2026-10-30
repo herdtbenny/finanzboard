@@ -1,5 +1,6 @@
 const KEY = 'finanzboard-token';
 const LOCK = 'finanzboard-faceid';
+const SPACE = 'finanzboard-space';
 
 // Without the Face ID lock the token stays in localStorage, so the phone stays
 // logged in. With it, the token only lives in sessionStorage: closing the app
@@ -25,12 +26,26 @@ export function setLock(on, token) {
     saveToken(token);
 }
 
+// The Haushalt last opened on this device.
+export function loadSpace() {
+    try { return localStorage.getItem(SPACE) || ''; } catch { return ''; }
+}
+
+export function saveSpace(id) {
+    try { localStorage.setItem(SPACE, id); } catch { /* private mode */ }
+}
+
 export class Unauthorized extends Error {}
 
-export async function api(path, token, { method = 'GET', body } = {}) {
+// `space` picks the Haushalt the request works on (X-Space header).
+export async function api(path, token, { method = 'GET', body, space } = {}) {
     const res = await fetch(`/api/${path}`, {
         method,
-        headers: { 'Content-Type': 'application/json', ...(token ? { Authorization: `Bearer ${token}` } : {}) },
+        headers: {
+            'Content-Type': 'application/json',
+            ...(token ? { Authorization: `Bearer ${token}` } : {}),
+            ...(space ? { 'X-Space': space } : {}),
+        },
         body: body ? JSON.stringify(body) : undefined,
     });
     const data = await res.json().catch(() => ({}));

@@ -1,7 +1,7 @@
 // One-off import of a MoneyStats backup (.moneystats) into Supabase.
 //
-//   node scripts/import-moneystats.js import/Backup.moneystats          → dry run, shows a summary
-//   node scripts/import-moneystats.js import/Backup.moneystats --write  → writes
+//   node scripts/import-moneystats.js import/Backup.moneystats "Haushalt"          → dry run, shows a summary
+//   node scripts/import-moneystats.js import/Backup.moneystats "Haushalt" --write  → writes into that Haushalt
 //
 // Safe to run again: ids are derived from the records, so rows are updated,
 // not duplicated. Reads SUPABASE_URL / SUPABASE_SERVICE_ROLE_KEY from .env.local.
@@ -17,9 +17,9 @@ import crypto from 'node:crypto';
 import fs from 'node:fs';
 import { createClient } from '@supabase/supabase-js';
 
-const [file, flag] = process.argv.slice(2);
-if (!file) {
-    console.error('Aufruf: node scripts/import-moneystats.js <datei.moneystats> [--write]');
+const [file, spaceName, flag] = process.argv.slice(2);
+if (!file || !spaceName) {
+    console.error('Aufruf: node scripts/import-moneystats.js <datei.moneystats> <Haushalt> [--write]');
     process.exit(1);
 }
 const write = flag === '--write';
@@ -173,6 +173,10 @@ if (!write) {
 const env = Object.fromEntries(fs.readFileSync('.env.local', 'utf8').split('\n')
     .map((l) => l.match(/^([A-Z_]+)=(.*)$/)).filter(Boolean).map((m) => [m[1], m[2]]));
 const db = createClient(env.SUPABASE_URL, env.SUPABASE_SERVICE_ROLE_KEY, { auth: { persistSession: false } });
+
+const { data: space } = await db.from('spaces').select('id').eq('name', spaceName).maybeSingle();
+if (!space) throw new Error(`Haushalt „${spaceName}“ gibt es nicht`);
+for (const row of [...accounts, ...transactions, ...recurrings]) row.space_id = space.id;
 
 const { error: accErr } = await db.from('accounts').upsert(accounts);
 if (accErr) throw accErr;

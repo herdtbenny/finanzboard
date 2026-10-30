@@ -4,6 +4,16 @@ Privates, mobiloptimiertes Haushaltsbuch: Konten und Umsätze trägst du selbst 
 ohne Bankverbindung. Daten liegen in **Supabase**, die App läuft auf **Vercel** und ist
 auf dem Handy als App installierbar („Zum Home-Bildschirm“).
 
+## Personen und Haushalte
+- Jede Person meldet sich mit **Name + Passwort** an (oder Face ID). Personen liegen in der
+  Datenbank, Passwörter gehasht (scrypt).
+- Daten (Konten, Umsätze, Daueraufträge) gehören zu einem **Haushalt**. Eine Person kann in
+  mehreren Haushalten sein, mehrere Personen können sich einen teilen – z. B. „Mama“, „Papa“
+  und „Eltern gemeinsam“. Wer mehrere hat, wechselt oben in der App.
+- Admins verwalten unter **Konten → Personen / Haushalte**: anlegen, Passwort zurücksetzen,
+  Zugriff vergeben. Jede Person ändert ihr eigenes Passwort unter Konten.
+- Jede API-Route prüft, dass die Person Mitglied des Haushalts ist (`api/_lib.js` → `db()`).
+
 ## Bedienung
 - **Konto anlegen** (💼 oben rechts) mit dem Kontostand an dem Tag, ab dem du einträgst
   (Anfangssaldo). Der aktuelle Stand ist immer Anfangssaldo + alle Umsätze.
@@ -29,6 +39,7 @@ auf dem Handy als App installierbar („Zum Home-Bildschirm“).
    nummerierten Migrationen (`supabase/002-…`) der Reihe nach. Achtung: `schema.sql` löscht alle Tabellen.
 2. **Lokal**: `cp .env.example .env.local`, ausfüllen, `npm install`, `npm run dev`
    (Frontend + API auf http://localhost:5173, die `api/`-Funktionen laufen im Vite-Server).
+   Danach einmalig den ersten Admin anlegen: `node scripts/setup-admin.js <Name> <Passwort>`.
 3. **Vercel**: Repo importieren, die Variablen aus `.env.example` setzen, deployen.
    Der Cron in `vercel.json` (`/api/keep-alive`, täglich) hält das kostenlose
    Supabase-Projekt aktiv, das sonst nach 7 Tagen ohne Zugriff pausiert.

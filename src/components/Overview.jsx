@@ -41,7 +41,7 @@ export default function Overview({ accounts, balances, series, transactions, mon
             {/* Accounts: compact list with each one's share of the total */}
             <Card className="px-2 py-2">
                 <ul>
-                    {accounts.map((a) => {
+                    {[...accounts].sort((a, b) => balances[b.id] - balances[a.id]).map((a) => {
                         const share = total > 0 ? Math.max(0, balances[a.id]) / total : 0;
                         return (
                             <li key={a.id}>

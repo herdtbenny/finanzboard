@@ -6,6 +6,7 @@ import { faceIdError, faceIdSupported, loginWithFaceId } from '../passkey.js';
 export default function Login({ onLogin }) {
     const locked = lockEnabled();
     const faceId = faceIdSupported();
+    const [name, setName] = useState('');
     const [password, setPassword] = useState('');
     const [showPassword, setShowPassword] = useState(!(locked && faceId));
     const [error, setError] = useState('');
@@ -16,7 +17,7 @@ export default function Login({ onLogin }) {
         setBusy(true);
         setError('');
         try {
-            const { token } = await api('login', '', { method: 'POST', body: { password } });
+            const { token } = await api('login', '', { method: 'POST', body: { name, password } });
             onLogin(token);
         } catch (err) {
             setError(err.message);
@@ -58,15 +59,23 @@ export default function Login({ onLogin }) {
                 {showPassword ? (
                     <form onSubmit={submit} className="space-y-3">
                         <input
-                            type="password"
                             autoFocus={!faceId}
+                            autoComplete="username"
+                            autoCapitalize="none"
+                            placeholder="Name"
+                            value={name}
+                            onChange={(e) => setName(e.target.value)}
+                            className="w-full rounded-full border border-line bg-card px-5 py-3.5 text-base outline-none focus:border-ink"
+                        />
+                        <input
+                            type="password"
                             autoComplete="current-password"
                             placeholder="Passwort"
                             value={password}
                             onChange={(e) => setPassword(e.target.value)}
                             className="w-full rounded-full border border-line bg-card px-5 py-3.5 text-base outline-none focus:border-ink"
                         />
-                        <button disabled={busy || !password} className="w-full rounded-full bg-ink py-3.5 font-medium text-paper disabled:opacity-40">
+                        <button disabled={busy || !name || !password} className="w-full rounded-full bg-ink py-3.5 font-medium text-paper disabled:opacity-40">
                             {busy ? 'Anmelden …' : 'Mit Passwort anmelden'}
                         </button>
                     </form>

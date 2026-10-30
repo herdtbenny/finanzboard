@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
-import { Wallet } from 'lucide-react';
+import { ChevronDown, Home, Wallet } from 'lucide-react';
 import { api, Unauthorized } from '../api.js';
 import { categoryMemory, categoryOf, categoryOptions } from '../shared/categories.js';
 import { monthKey } from '../shared/format.js';
@@ -13,7 +13,7 @@ import TransactionSheet from './TransactionSheet.jsx';
 
 const byDateDesc = (a, b) => b.booking_date.localeCompare(a.booking_date) || String(b.created_at).localeCompare(String(a.created_at));
 
-export default function Dashboard({ token, onLogout }) {
+export default function Dashboard({ token, me, space, onSpace, onMeChanged, onLogout }) {
     const [data, setData] = useState(null);
     const [error, setError] = useState('');
     const [tab, setTab] = useState('overview');
@@ -30,12 +30,12 @@ export default function Dashboard({ token, onLogout }) {
     // Throws on errors so the sheets can show them; logs out on 401.
     const call = useCallback(async (path, opts) => {
         try {
-            return await api(path, token, opts);
+            return await api(path, token, { ...opts, space });
         } catch (e) {
             if (e instanceof Unauthorized) onLogout();
             throw e;
         }
-    }, [token, onLogout]);
+    }, [token, space, onLogout]);
 
     const load = useCallback(() => call('data').then(setData), [call]);
 
@@ -140,7 +140,7 @@ export default function Dashboard({ token, onLogout }) {
     } else {
         content = (
             <Accounts
-                token={token} accounts={accounts} balances={balances} transactions={transactions} recurrings={data.recurrings || []}
+                token={token} me={me} onMeChanged={onMeChanged} accounts={accounts} balances={balances} transactions={transactions} recurrings={data.recurrings || []}
                 onSave={saveAccount} onDelete={deleteAccount} onOpenRecurring={setRecurringSheet} onLogout={onLogout}
             />
         );
@@ -149,6 +149,7 @@ export default function Dashboard({ token, onLogout }) {
     const ready = data && accounts.length > 0;
     return (
         <div className={`mx-auto min-h-dvh max-w-2xl px-4 pt-safe ${ready ? 'pb-tabbar' : 'pb-safe'}`}>
+            {me.spaces.length > 1 && <SpaceSwitch spaces={me.spaces} space={space} onSpace={onSpace} />}
             <main key={tab}>{content}</main>
 
             {ready && <TabBar tab={tab} onTab={goTo} onAdd={() => setTxSheet('new')} />}
@@ -173,5 +174,24 @@ export default function Dashboard({ token, onLogout }) {
 
             {newAccount && <AccountSheet account={{}} count={0} onSave={saveAccount} onDelete={deleteAccount} onClose={() => setNewAccount(false)} />}
         </div>
+    );
+}
+
+// Shown when the person belongs to several Haushalte.
+function SpaceSwitch({ spaces, space, onSpace }) {
+    return (
+        <label className="relative mb-3 inline-flex items-center gap-2 rounded-full border border-line bg-card py-2 pr-9 pl-3.5 text-sm font-medium">
+            <Home size={15} className="shrink-0" />
+            <select
+                value={space}
+                onChange={(e) => onSpace(e.target.value)}
+                aria-label="Haushalt"
+                className="absolute inset-0 cursor-pointer appearance-none opacity-0"
+            >
+                {spaces.map((s) => <option key={s.id} value={s.id}>{s.name}</option>)}
+            </select>
+            {spaces.find((s) => s.id === space)?.name}
+            <ChevronDown size={15} className="pointer-events-none absolute right-3" />
+        </label>
     );
 }

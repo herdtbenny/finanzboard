@@ -1,15 +1,16 @@
 import { ACCOUNT_COLUMNS, db, TRANSACTION_COLUMNS } from './_lib.js';
 import { bookDue } from './_recurring.js';
 
-// All accounts, transactions and standing orders. Due standing orders are
-// booked first, so opening the app shows them right away. Balances are
-// computed in the browser, so this needs the full history.
+// Everything of the picked Haushalt: accounts, transactions, standing orders.
+// Due standing orders are booked first, so opening the app shows them right
+// away. Balances are computed in the browser, so this needs the full history.
 export default async function handler(req, res) {
-    const client = db(req, res);
-    if (!client) return;
+    const s = await db(req, res);
+    if (!s) return;
+    const { client, spaceId } = s;
 
     try {
-        await bookDue(client);
+        await bookDue(client, spaceId);
     } catch (e) {
         return res.status(500).json({ error: `Daueraufträge: ${e.message}` });
     }
@@ -18,6 +19,7 @@ export default async function handler(req, res) {
     const transactions = [];
     for (let from = 0; ; from += 1000) {
         const { data, error } = await client.from('transactions').select(TRANSACTION_COLUMNS)
+            .eq('space_id', spaceId)
             .order('booking_date', { ascending: false })
             .order('created_at', { ascending: false })
             .range(from, from + 999);
@@ -27,8 +29,8 @@ export default async function handler(req, res) {
     }
 
     const [accounts, recurrings] = await Promise.all([
-        client.from('accounts').select(ACCOUNT_COLUMNS).order('sort_order').order('created_at'),
-        client.from('recurrings').select('*').order('created_at'),
+        client.from('accounts').select(ACCOUNT_COLUMNS).eq('space_id', spaceId).order('sort_order').order('created_at'),
+        client.from('recurrings').select('*').eq('space_id', spaceId).order('created_at'),
     ]);
     if (accounts.error) return res.status(500).json({ error: accounts.error.message });
 

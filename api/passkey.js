@@ -3,11 +3,13 @@ import {
     generateAuthenticationOptions, generateRegistrationOptions,
     verifyAuthenticationResponse, verifyRegistrationResponse,
 } from '@simplewebauthn/server';
-import { getSupabase, isAuthorized } from './_lib.js';
+import { getSupabase, makeToken, session } from './_lib.js';
 
 // Face ID / Touch ID login via WebAuthn passkeys. POST ?step=…
-//   register-options / register-verify — adds this device (needs a login)
-//   login-options / login-verify       — answers with the session token
+//   register-options / register-verify — adds this device for the signed-in person
+//   login-options / login-verify       — answers with that person's session token
+// Passkeys are discoverable: the device itself offers the right person, so
+// logging in needs no name.
 // The challenge travels to the browser and back inside a signed, 5-minute
 // `state`, so nothing has to be stored between the two calls.
 
@@ -40,22 +42,22 @@ export default async function handler(req, res) {
 
     const { step } = req.query;
     const { rpID, origin } = site(req);
-    const { data: keys, error } = await client.from('passkeys').select('*');
-    if (error) return res.status(500).json({ error: error.message });
 
     try {
         if (step === 'register-options' || step === 'register-verify') {
-            if (!isAuthorized(req)) return res.status(401).json({ error: 'Nicht angemeldet' });
+            const s = await session(req, res);
+            if (!s) return;
+            const { data: keys } = await client.from('passkeys').select('id,transports').eq('user_id', s.user.id);
 
             if (step === 'register-options') {
                 const options = await generateRegistrationOptions({
                     rpName: 'Finanzen',
                     rpID,
-                    userName: 'Finanzen',
-                    userID: new TextEncoder().encode('finanzboard-owner'),
+                    userName: s.user.name,
+                    userID: new TextEncoder().encode(s.user.id),
                     attestationType: 'none',
-                    excludeCredentials: keys.map((k) => ({ id: k.id, transports: k.transports?.split(',') })),
-                    authenticatorSelection: { residentKey: 'preferred', userVerification: 'required' },
+                    excludeCredentials: (keys || []).map((k) => ({ id: k.id, transports: k.transports?.split(',') })),
+                    authenticatorSelection: { residentKey: 'required', userVerification: 'required' },
                 });
                 return res.status(200).json({ options, state: makeState(options.challenge) });
             }
@@ -73,6 +75,7 @@ export default async function handler(req, res) {
             const { credential } = result.registrationInfo;
             const { error: insErr } = await client.from('passkeys').upsert({
                 id: credential.id,
+                user_id: s.user.id,
                 public_key: b64(credential.publicKey),
                 counter: credential.counter,
                 transports: credential.transports?.join(',') || null,
@@ -82,20 +85,15 @@ export default async function handler(req, res) {
         }
 
         if (step === 'login-options') {
-            if (!keys.length) return res.status(404).json({ error: 'Face ID ist noch nicht eingerichtet' });
-            const options = await generateAuthenticationOptions({
-                rpID,
-                allowCredentials: keys.map((k) => ({ id: k.id, transports: k.transports?.split(',') })),
-                userVerification: 'required',
-            });
+            const options = await generateAuthenticationOptions({ rpID, userVerification: 'required' });
             return res.status(200).json({ options, state: makeState(options.challenge) });
         }
 
         if (step === 'login-verify') {
             const challenge = readState(req.body.state);
             if (!challenge) return res.status(400).json({ error: 'Zeit abgelaufen, bitte nochmal' });
-            const key = keys.find((k) => k.id === req.body.response?.id);
-            if (!key) return res.status(401).json({ error: 'Dieses Gerät ist nicht eingerichtet' });
+            const { data: key } = await client.from('passkeys').select('*').eq('id', String(req.body.response?.id || '')).maybeSingle();
+            if (!key?.user_id) return res.status(401).json({ error: 'Face ID ist auf diesem Gerät nicht eingerichtet' });
             const result = await verifyAuthenticationResponse({
                 response: req.body.response,
                 expectedChallenge: challenge,
@@ -111,7 +109,7 @@ export default async function handler(req, res) {
             });
             if (!result.verified) return res.status(401).json({ error: 'Nicht bestätigt' });
             await client.from('passkeys').update({ counter: result.authenticationInfo.newCounter }).eq('id', key.id);
-            return res.status(200).json({ token: process.env.DASHBOARD_SESSION_SECRET });
+            return res.status(200).json({ token: makeToken(key.user_id) });
         }
 
         res.status(400).json({ error: 'Unbekannter Schritt' });
