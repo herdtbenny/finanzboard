@@ -32,30 +32,30 @@ export default function MonthCard({ transactions, month, onMonth, onAll }) {
     const avgTo = monthLabel(prevKey, { month: 'short' }).replace('.', '');
 
     return (
-        <Card className="p-4">
-            <div className="mb-3 flex items-center justify-between gap-2">
+        <Card>
+            <div className="mb-4 flex items-center justify-between gap-2">
                 <h2 className="text-[15px] font-semibold">Monat</h2>
                 <MonthSwitch month={month} onChange={onMonth} compact />
             </div>
 
             {/* Income − expenses = saved */}
-            <div className="space-y-2">
+            <div className="space-y-3">
                 <Flow label="Einnahmen" count={nIn} value={summary.in} share={summary.in / scale} tone="bg-income" />
                 <Flow label="Ausgaben" count={nOut} value={summary.out} share={summary.out / scale} tone="bg-expense" />
             </div>
             {/* Saved, with how it compares — one box */}
-            <div className="mt-3 rounded-2xl bg-ink/[0.04] px-3.5 py-2.5">
+            <div className="mt-4 rounded-2xl bg-ink/[0.04] px-4 py-3.5">
                 <div className="flex items-center justify-between gap-3">
                     <div>
-                        <p className="text-xs text-muted">Gespart</p>
-                        {summary.rate != null && summary.net >= 0 && <p className="text-[11px] text-muted">{Math.round(summary.rate * 100)} % der Einnahmen</p>}
+                        <p className="text-sm text-muted">Gespart</p>
+                        {summary.rate != null && summary.net >= 0 && <p className="text-xs text-muted">{Math.round(summary.rate * 100)} % der Einnahmen</p>}
                     </div>
-                    <span className={`tabular text-base font-semibold ${summary.net < 0 ? 'text-expense' : 'text-income'}`}>
+                    <span className={`tabular text-2xl font-semibold tracking-tight ${summary.net < 0 ? 'text-expense' : 'text-income'}`}>
                         {summary.net >= 0 ? '+' : ''}{money(summary.net)}
                     </span>
                 </div>
                 {(prev != null || usual != null || Math.abs(valueChange) > 0.005) && (
-                    <div className="mt-2 space-y-1 border-t border-line pt-2">
+                    <div className="mt-3 space-y-1.5 border-t border-line pt-3">
                         {prev != null && <Compare label={`als im ${prevName}`} base={prev} value={summary.net} />}
                         {usual != null && <Compare label={`als im Schnitt ${avgFrom}\u2011${avgTo}`} base={usual} value={summary.net} />}
                         {Math.abs(valueChange) > 0.005 && (
@@ -68,24 +68,24 @@ export default function MonthCard({ transactions, month, onMonth, onAll }) {
             </div>
 
             {top.length > 0 && (
-                <div className="mt-4">
-                    <div className="mb-2 flex items-center justify-between">
+                <div className="mt-5">
+                    <div className="mb-3 flex items-center justify-between">
                         <p className="text-xs font-medium text-muted">Top-Ausgaben</p>
                         <button onClick={onAll} className="-mr-2 rounded-full px-2 py-0.5 text-xs text-muted active:bg-ink/5">Alle</button>
                     </div>
-                    <ul className="space-y-2">
+                    <ul className="space-y-3">
                         {top.map(([cat, sum]) => (
-                            <li key={cat} className="flex items-center gap-2.5">
-                                <CategoryIcon category={cat} size="xs" />
+                            <li key={cat} className="flex items-center gap-3">
+                                <CategoryIcon category={cat} size="sm" />
                                 <div className="min-w-0 flex-1">
-                                    <div className="mb-1 flex justify-between gap-2 text-xs">
+                                    <div className="mb-1 flex justify-between gap-2 text-sm">
                                         <span className="truncate">{cat}</span>
                                         <span className="tabular shrink-0 font-medium">
-                                            <span className="mr-1.5 font-normal text-muted">{Math.round((sum / summary.out) * 100)} %</span>
+                                            <span className="mr-1.5 text-xs font-normal text-muted">{Math.round((sum / summary.out) * 100)} %</span>
                                             {money(sum)}
                                         </span>
                                     </div>
-                                    <Bar value={summary.out ? sum / summary.out : 0} tone="bg-expense" thin />
+                                    <Bar value={summary.out ? sum / summary.out : 0} tone="bg-expense" />
                                 </div>
                             </li>
                         ))}
@@ -100,11 +100,11 @@ export default function MonthCard({ transactions, month, onMonth, onAll }) {
 function Flow({ label, count, value, share, tone }) {
     return (
         <div>
-            <div className="mb-1 flex justify-between text-xs">
-                <span className="text-muted">{label} · {count} {count === 1 ? 'Buchung' : 'Buchungen'}</span>
-                <span className="tabular text-sm font-semibold">{money(value)}</span>
+            <div className="mb-1.5 flex items-baseline justify-between text-sm">
+                <span className="text-muted">{label} <span className="text-xs">· {count} {count === 1 ? 'Buchung' : 'Buchungen'}</span></span>
+                <span className="tabular text-base font-semibold">{money(value)}</span>
             </div>
-            <div className="h-1.5 rounded-full bg-ink/[0.07]">
+            <div className="h-2 rounded-full bg-ink/[0.07]">
                 <div className={`h-full rounded-full ${tone}`} style={{ width: `${Math.max(value > 0 ? 2 : 0, share * 100)}%` }} />
             </div>
         </div>
@@ -116,10 +116,10 @@ function Compare({ label, base, value }) {
     const diff = value - base;
     const up = diff >= 0;
     return (
-        <p className="flex items-start gap-1 text-xs leading-snug">
+        <p className="flex items-start gap-1.5 text-sm leading-snug">
             {up
-                ? <ArrowUpRight size={13} className="mt-px shrink-0 text-income" />
-                : <ArrowDownRight size={13} className="mt-px shrink-0 text-expense" />}
+                ? <ArrowUpRight size={15} className="mt-0.5 shrink-0 text-income" />
+                : <ArrowDownRight size={15} className="mt-0.5 shrink-0 text-expense" />}
             <span>
                 <span className={`tabular font-semibold ${up ? 'text-income' : 'text-expense'}`}>{money(Math.abs(diff))} {up ? 'mehr' : 'weniger'}</span>
                 <span className="text-muted"> gespart {label} <span className="tabular whitespace-nowrap">({money(base)})</span></span>

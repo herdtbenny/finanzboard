@@ -24,22 +24,16 @@ export default function Overview({ accounts, balances, series, transactions, mon
                     <BalanceChart series={series} onActive={setPoint} />
                 </div>
 
-                {/* How the total splits across the accounts */}
-                <ul className="mt-3 space-y-0.5 border-t border-paper/15 pt-2">
-                    {[...accounts].sort((a, b) => balances[b.id] - balances[a.id]).map((a) => {
-                        const share = total > 0 ? Math.max(0, balances[a.id]) / total : 0;
-                        return (
-                            <li key={a.id}>
-                                <button onClick={() => onAccount(a.id)} className="flex w-full items-center gap-2.5 rounded-full py-1 text-left text-xs active:opacity-60">
-                                    <span className="w-24 shrink-0 truncate opacity-70">{a.name}</span>
-                                    <span className="h-1 flex-1 rounded-full bg-paper/15">
-                                        <span className="block h-full rounded-full bg-paper/80" style={{ width: `${Math.max(share > 0 ? 2 : 0, share * 100)}%` }} />
-                                    </span>
-                                    <span className={`tabular w-[5.5rem] shrink-0 text-right font-medium ${balances[a.id] < 0 ? 'text-expense' : ''}`}>{money(balances[a.id])}</span>
-                                </button>
-                            </li>
-                        );
-                    })}
+                {/* How the total splits across the accounts — two compact columns */}
+                <ul className="mt-2.5 grid grid-cols-2 gap-x-3 gap-y-0.5 border-t border-paper/15 pt-2">
+                    {[...accounts].sort((a, b) => balances[b.id] - balances[a.id]).map((a) => (
+                        <li key={a.id}>
+                            <button onClick={() => onAccount(a.id)} className="flex w-full items-baseline justify-between gap-1.5 rounded-full py-0.5 text-left text-[11px] active:opacity-60">
+                                <span className="truncate opacity-60">{a.name}</span>
+                                <span className={`tabular shrink-0 font-medium ${balances[a.id] < 0 ? 'text-expense' : ''}`}>{money(balances[a.id])}</span>
+                            </button>
+                        </li>
+                    ))}
                 </ul>
             </section>
 

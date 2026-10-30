@@ -18,9 +18,9 @@ export default function Categories({ categories, onSave, onDelete }) {
             <ul>
                 {categories.map((c) => (
                     <li key={c.id}>
-                        <button onClick={() => setEditing(c)} className="flex w-full items-center gap-3 rounded-[20px] px-3 py-2 text-left active:bg-ink/5">
+                        <button onClick={() => setEditing(c)} className="flex w-full items-center gap-2.5 rounded-[18px] px-3 py-1.5 text-left active:bg-ink/5">
                             <CategoryIcon category={c.name} size="sm" />
-                            <span className="flex-1 truncate text-[15px] font-medium">{c.name}</span>
+                            <span className="flex-1 truncate text-sm font-medium">{c.name}</span>
                             <span className="text-xs text-muted">{c.kind === 'out' ? 'Ausgabe' : 'Einnahme'}</span>
                         </button>
                     </li>

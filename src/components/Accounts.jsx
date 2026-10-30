@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { ChevronRight, Download, LogOut, Plus, RefreshCw, ScanFace, Trash2 } from 'lucide-react';
+import { Download, LogOut, RefreshCw, ScanFace, Trash2 } from 'lucide-react';
 import { lockEnabled, setLock } from '../api.js';
 import { faceIdError, faceIdSupported, registerFaceId } from '../passkey.js';
 import { amountInput, money, newId, parseAmount, todayIso } from '../shared/format.js';
@@ -18,47 +18,44 @@ export default function Accounts({ token, me, onMeChanged, accounts, balances, t
 
     return (
         <div className="rise space-y-4">
-            <PageTitle>Konten</PageTitle>
+            <PageTitle right={<button onClick={() => setEditing({})} className="mb-1 rounded-full border border-line bg-card px-3.5 py-1.5 text-sm font-medium active:bg-ink/5">+ Konto</button>}>Konten</PageTitle>
 
-            <ul className="space-y-2">
-                {accounts.map((a) => (
-                    <li key={a.id} className="overflow-hidden rounded-[24px] border border-line bg-card">
-                        <button onClick={() => setEditing(a)} className="flex w-full items-center gap-3 px-5 py-4 text-left active:bg-ink/5">
-                            <div className="min-w-0 flex-1">
-                                <p className="truncate font-medium">{a.name}</p>
-                                <p className="text-xs text-muted">{a.kind === 'depot' ? 'Depot · Wert manuell' : `${counts[a.id] || 0} Umsätze`}</p>
-                            </div>
-                            <span className={`tabular font-semibold ${balances[a.id] < 0 ? 'text-expense' : ''}`}>{money(balances[a.id])}</span>
-                            <ChevronRight size={16} className="text-muted" />
-                        </button>
-                        {a.kind === 'depot' && (
-                            <button onClick={() => setValuing(a)} className="flex w-full items-center justify-center gap-2 border-t border-line py-2.5 text-sm font-medium active:bg-ink/5">
-                                <RefreshCw size={15} /> Wert aktualisieren
+            <Card className="px-2 py-2">
+                <ul>
+                    {accounts.map((a) => (
+                        <li key={a.id} className="flex items-center gap-1">
+                            <button onClick={() => setEditing(a)} className="flex min-w-0 flex-1 items-center gap-2.5 rounded-[18px] px-3 py-1.5 text-left active:bg-ink/5">
+                                <div className="min-w-0 flex-1">
+                                    <p className="truncate text-sm font-medium">{a.name}</p>
+                                    <p className="text-[11px] text-muted">{a.kind === 'depot' ? 'Depot · Wert manuell' : `${counts[a.id] || 0} Umsätze`}</p>
+                                </div>
+                                <span className={`tabular text-sm font-semibold ${balances[a.id] < 0 ? 'text-expense' : ''}`}>{money(balances[a.id])}</span>
                             </button>
-                        )}
-                    </li>
-                ))}
-            </ul>
-            <div className="flex justify-between px-5 text-sm">
-                <span className="text-muted">Gesamt</span>
-                <span className="tabular font-semibold">{money(total)}</span>
-            </div>
-
-            <button onClick={() => setEditing({})} className="flex w-full items-center justify-center gap-2 rounded-full bg-ink py-3.5 font-medium text-paper">
-                <Plus size={18} /> Konto hinzufügen
-            </button>
+                            {a.kind === 'depot' && (
+                                <button onClick={() => setValuing(a)} aria-label="Wert aktualisieren" title="Wert aktualisieren" className="flex size-8 shrink-0 items-center justify-center rounded-full border border-line active:bg-ink/5">
+                                    <RefreshCw size={14} />
+                                </button>
+                            )}
+                        </li>
+                    ))}
+                </ul>
+                <div className="mx-3 mt-1 flex justify-between border-t border-line pt-2 text-sm">
+                    <span className="text-muted">Gesamt</span>
+                    <span className="tabular font-semibold">{money(total)}</span>
+                </div>
+            </Card>
 
             <Categories categories={categories} onSave={onSaveCategory} onDelete={onDeleteCategory} />
 
-            <Profile token={token} me={me} />
-            <FaceId token={token} />
             {me.user.is_admin && <People token={token} me={me} onMeChanged={onMeChanged} />}
 
-            <Card className="space-y-1 p-2">
-                <button onClick={() => exportCsv(transactions, accounts)} className="flex w-full items-center gap-3 rounded-full px-4 py-3 text-left text-sm font-medium active:bg-ink/5">
-                    <Download size={17} /> Alle Umsätze als CSV exportieren
+            <Card className="p-2">
+                <Profile token={token} me={me} />
+                <FaceId token={token} />
+                <button onClick={() => exportCsv(transactions, accounts)} className="flex w-full items-center gap-2.5 rounded-full px-3 py-2 text-left text-sm font-medium active:bg-ink/5">
+                    <Download size={17} /> Umsätze als CSV exportieren
                 </button>
-                <button onClick={onLogout} className="flex w-full items-center gap-3 rounded-full px-4 py-3 text-left text-sm font-medium text-muted active:bg-ink/5">
+                <button onClick={onLogout} className="flex w-full items-center gap-2.5 rounded-full px-3 py-2 text-left text-sm font-medium text-muted active:bg-ink/5">
                     <LogOut size={17} /> Abmelden
                 </button>
             </Card>
@@ -109,23 +106,20 @@ function FaceId({ token }) {
     }
 
     return (
-        <Card className="p-2">
-            <div className="flex items-center gap-3 px-3 py-2">
-                <ScanFace size={20} className="shrink-0" />
-                <div className="min-w-0 flex-1">
-                    <p className="text-sm font-medium">Face ID</p>
-                    <p className="text-xs text-muted">{on ? 'Beim Öffnen gesperrt' : 'Entsperren statt Passwort'}</p>
-                </div>
+        <>
+            <div className="flex items-center gap-2.5 px-3 py-1.5 text-sm">
+                <ScanFace size={17} className="shrink-0" />
+                <span className="flex-1 font-medium">Face ID <span className="text-xs font-normal text-muted">· {on ? 'beim Öffnen gesperrt' : 'aus'}</span></span>
                 {on ? (
-                    <button onClick={disable} className="rounded-full border border-line px-4 py-2 text-sm font-medium">Aus</button>
+                    <button onClick={disable} className="rounded-full border border-line px-3 py-1 text-xs font-medium">Aus</button>
                 ) : (
-                    <button onClick={enable} disabled={busy} className="rounded-full bg-ink px-4 py-2 text-sm font-medium text-paper disabled:opacity-40">
+                    <button onClick={enable} disabled={busy} className="rounded-full bg-ink px-3 py-1 text-xs font-medium text-paper disabled:opacity-40">
                         {busy ? '…' : 'Einrichten'}
                     </button>
                 )}
             </div>
-            {message && <p className="px-3 pb-2 text-xs text-muted">{message}</p>}
-        </Card>
+            {message && <p className="px-3 pb-1 text-xs text-muted">{message}</p>}
+        </>
     );
 }
 

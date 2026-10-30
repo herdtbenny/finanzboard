@@ -8,17 +8,15 @@ import { Card, CardHeader } from './ui.jsx';
 export function Profile({ token, me }) {
     const [open, setOpen] = useState(false);
     return (
-        <Card className="p-2">
-            <button onClick={() => setOpen(true)} className="flex w-full items-center gap-3 rounded-full px-3 py-2 text-left active:bg-ink/5">
-                <UserRound size={20} className="shrink-0" />
-                <div className="min-w-0 flex-1">
-                    <p className="text-sm font-medium">{me.user.name}</p>
-                    <p className="text-xs text-muted">Passwort ändern</p>
-                </div>
-                <ChevronRight size={16} className="text-muted" />
+        <>
+            <button onClick={() => setOpen(true)} className="flex w-full items-center gap-2.5 rounded-full px-3 py-2 text-left text-sm active:bg-ink/5">
+                <UserRound size={17} className="shrink-0" />
+                <span className="flex-1 font-medium">{me.user.name}</span>
+                <span className="text-xs text-muted">Passwort ändern</span>
+                <ChevronRight size={15} className="text-muted" />
             </button>
             {open && <PasswordSheet token={token} onClose={() => setOpen(false)} />}
-        </Card>
+        </>
     );
 }
 
@@ -85,10 +83,10 @@ export default function People({ token, me, onMeChanged }) {
                 <ul>
                     {data.users.map((u) => (
                         <li key={u.id}>
-                            <button onClick={() => setPerson(u)} className="flex w-full items-center gap-3 rounded-[20px] px-3 py-2.5 text-left active:bg-ink/5">
-                                <span className="flex size-10 shrink-0 items-center justify-center rounded-full bg-ink/[0.06]"><UserRound size={18} strokeWidth={1.8} /></span>
+                            <button onClick={() => setPerson(u)} className="flex w-full items-center gap-2.5 rounded-[18px] px-3 py-1.5 text-left active:bg-ink/5">
+                                <span className="flex size-8 shrink-0 items-center justify-center rounded-full bg-ink/[0.06]"><UserRound size={15} strokeWidth={1.8} /></span>
                                 <div className="min-w-0 flex-1">
-                                    <p className="flex items-center gap-1.5 truncate text-[15px] font-medium">
+                                    <p className="flex items-center gap-1.5 truncate text-sm font-medium">
                                         {u.name}{u.id === me.user.id && <span className="text-xs font-normal text-muted">(du)</span>}
                                     </p>
                                     <p className="truncate text-xs text-muted">
@@ -107,10 +105,10 @@ export default function People({ token, me, onMeChanged }) {
                 <ul>
                     {data.spaces.map((s) => (
                         <li key={s.id}>
-                            <button onClick={() => setSpace(s)} className="flex w-full items-center gap-3 rounded-[20px] px-3 py-2.5 text-left active:bg-ink/5">
-                                <span className="flex size-10 shrink-0 items-center justify-center rounded-full bg-ink/[0.06]"><Home size={18} strokeWidth={1.8} /></span>
+                            <button onClick={() => setSpace(s)} className="flex w-full items-center gap-2.5 rounded-[18px] px-3 py-1.5 text-left active:bg-ink/5">
+                                <span className="flex size-8 shrink-0 items-center justify-center rounded-full bg-ink/[0.06]"><Home size={15} strokeWidth={1.8} /></span>
                                 <div className="min-w-0 flex-1">
-                                    <p className="truncate text-[15px] font-medium">{s.name}</p>
+                                    <p className="truncate text-sm font-medium">{s.name}</p>
                                     <p className="truncate text-xs text-muted">{s.members.map((id) => names[id]).join(', ')}</p>
                                 </div>
                                 <ChevronRight size={16} className="text-muted" />
