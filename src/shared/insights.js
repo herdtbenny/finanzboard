@@ -60,19 +60,3 @@ export function balanceSeries(accounts, transactions, n = 12) {
         return { key, value: running };
     });
 }
-
-// Frequent bookings of the last 90 days (same name, category and amount),
-// offered as one-tap templates in the form.
-export function quickTemplates(transactions, limit = 6) {
-    const since = new Date(Date.now() - 90 * 86400000).toISOString().slice(0, 10);
-    const counts = new Map();
-    for (const t of transactions) {
-        if (t.booking_date < since) break;
-        if (!t.counterparty || t.category === 'Kontostand') continue;
-        const key = `${t.counterparty.toLowerCase()}|${t.category}|${t.amount}`;
-        const hit = counts.get(key) || { counterparty: t.counterparty, category: t.category, amount: t.amount, account_id: t.account_id, n: 0 };
-        hit.n++;
-        counts.set(key, hit);
-    }
-    return [...counts.values()].filter((t) => t.n >= 2).sort((a, b) => b.n - a.n).slice(0, limit);
-}

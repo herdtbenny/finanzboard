@@ -1,7 +1,7 @@
 import { useState } from 'react';
-import { ArrowDown, Repeat, Trash2, Zap } from 'lucide-react';
+import { ArrowDown, Repeat, Trash2 } from 'lucide-react';
 import { categorize } from '../shared/categories.js';
-import { amountInput, money, moneyShort, newId, parseAmount, todayIso } from '../shared/format.js';
+import { amountInput, newId, parseAmount, todayIso } from '../shared/format.js';
 import { REPEATS } from '../shared/repeat.js';
 import Sheet, { Field, inputClass } from './Sheet.jsx';
 import ReceiptScanner from './ReceiptScanner.jsx';
@@ -15,7 +15,7 @@ const KINDS = [['out', 'Ausgabe', 'bg-expense text-white'], ['in', 'Einnahme', '
 // category is tapped it follows what was typed: the category used most for
 // that name before, else the keyword rules.
 export default function TransactionSheet({
-    entry, recurring, accounts, lastAccountId, counterparties, memory, optionsFor, templates = [],
+    entry, recurring, accounts, lastAccountId, counterparties, memory, optionsFor,
     onSaveTransactions, onDeleteTransaction, onSaveRecurring, onDeleteRecurring, onClose,
 }) {
     const isRecurring = Boolean(recurring);
@@ -54,14 +54,6 @@ export default function TransactionSheet({
         if (r.shop) setCounterparty(r.shop);
         if (r.date) setDate(r.date);
         setCategory(null);
-    }
-
-    function applyTemplate(t) {
-        setKind(t.amount > 0 ? 'in' : 'out');
-        setAmount(amountInput(t.amount));
-        setCounterparty(t.counterparty);
-        setCategory(t.category);
-        if (accounts.some((a) => a.id === t.account_id)) setAccountId(t.account_id);
     }
 
     async function run(fn) {
@@ -135,25 +127,6 @@ export default function TransactionSheet({
     return (
         <Sheet title={title} onClose={onClose}>
             <form onSubmit={save} className="space-y-4 pb-4">
-                {!editing && !isRecurring && templates.length > 0 && (
-                    <div className="flex flex-wrap gap-2">
-                        {templates.map((t) => (
-                            <button
-                                key={`${t.counterparty}|${t.amount}`}
-                                type="button"
-                                onClick={() => applyTemplate(t)}
-                                className="flex items-center gap-1.5 rounded-full border border-line bg-card py-1.5 pr-3 pl-2.5 text-sm transition-transform active:scale-95"
-                            >
-                                <Zap size={13} className="text-muted" />
-                                {t.counterparty}
-                                <span className={`tabular ${t.amount > 0 ? 'text-income' : 'text-muted'}`}>
-                                    {Number.isInteger(t.amount) ? moneyShort(Math.abs(t.amount)) : money(Math.abs(t.amount))}
-                                </span>
-                            </button>
-                        ))}
-                    </div>
-                )}
-
                 {!editing && !isRecurring && <ReceiptScanner known={counterparties} onResult={applyReceipt} />}
 
                 <div className="grid grid-cols-3 rounded-full border border-line bg-card p-1">
