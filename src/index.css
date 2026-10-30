@@ -1,0 +1,39 @@
+@import "tailwindcss";
+
+@theme {
+  --color-paper: #fafaf9;
+  --color-card: #ffffff;
+  --color-ink: #111110;
+  --color-muted: #6b6b66;
+  --color-line: #e7e6e2;
+  --color-income: #0f8a74;
+  --color-expense: #c2410c;
+  --font-sans: ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif;
+}
+
+/* Dark mode: own steps, validated against the dark surface (not a flip). */
+@media (prefers-color-scheme: dark) {
+  :root {
+    --color-paper: #0c0c0b;
+    --color-card: #1a1a19;
+    --color-ink: #f2f2ef;
+    --color-muted: #9b9b95;
+    --color-line: #2c2c2a;
+    --color-income: #2a9d88;
+    --color-expense: #e0673a;
+  }
+}
+
+html { -webkit-text-size-adjust: 100%; }
+body {
+  background: var(--color-paper);
+  color: var(--color-ink);
+  font-family: var(--font-sans);
+  -webkit-tap-highlight-color: transparent;
+  overscroll-behavior-y: none;
+}
+.tabular { font-variant-numeric: tabular-nums; }
+.no-scrollbar::-webkit-scrollbar { display: none; }
+.no-scrollbar { scrollbar-width: none; }
+.pt-safe { padding-top: max(env(safe-area-inset-top), 0.75rem); }
+.pb-safe { padding-bottom: max(env(safe-area-inset-bottom), 1rem); }
