@@ -3,7 +3,7 @@ import {
     Dog, Dumbbell, FileText, Film, Flower2, Fuel, Gamepad2, Gem, Gift, Glasses, GraduationCap, Heart, HeartPulse,
     Home, Landmark, Laptop, Music, Package, Palette, PiggyBank, Pill, Pizza, Plane, Receipt, Scale, Scissors, Shapes,
     ShieldCheck, Shirt, ShoppingBasket, Smartphone, Sofa, Sparkles, Sprout, Stethoscope, Tag, Ticket, Train, TreePine,
-    TrendingUp, Trophy, Users, UtensilsCrossed, Wallet, Wifi, Wine, Wrench, Zap,
+    TrendingUp, Trophy, Users, UtensilsCrossed, Wallet, Wifi, Wine, Wrench, Zap, ShoppingBag,
 } from 'lucide-react';
 import { customCategories } from './categories.js';
 
@@ -24,7 +24,7 @@ const ICONS = {
     'Abos & Verträge': FileText,
     Versicherungen: ShieldCheck,
     Kleidung: Shirt,
-    'Shopping & Technik': Laptop,
+    Shopping: ShoppingBag,
     'Drogerie & Gesundheit': HeartPulse,
     'Sport & Freizeit': Bike,
     Urlaub: Plane,

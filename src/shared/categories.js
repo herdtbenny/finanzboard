@@ -3,7 +3,7 @@
 // there too.
 export const EXPENSE_CATEGORIES = [
     'Lebensmittel', 'Essen gehen', 'Mobilität', 'Wohnen', 'Abos & Verträge', 'Versicherungen', 'Kleidung',
-    'Shopping & Technik', 'Drogerie & Gesundheit', 'Sport & Freizeit', 'Urlaub', 'Geschenke', 'Sonstiges',
+    'Shopping', 'Drogerie & Gesundheit', 'Sport & Freizeit', 'Urlaub', 'Geschenke', 'Sonstiges',
 ];
 export const INCOME_CATEGORIES = ['Gehalt & Jobs', 'Taschengeld', 'Familie', 'Verkäufe', 'Sonstiges'];
 
@@ -41,12 +41,13 @@ export const CATEGORY_RULES = [
     { name: 'Drogerie & Gesundheit', match: ['dm', 'rossmann', 'müller', 'apotheke', 'arzt', 'zahn', 'linsen', 'brille', 'impf', 'friseur', 'rasier', 'elmex', 'nasenspray', 'tabletten'] },
     { name: 'Lebensmittel', match: ['rewe', 'edeka', 'aldi', 'lidl', 'netto', 'penny', 'kaufland', 'norma', 'globus', 'tegut', 'denns', 'alnatura', 'bäcker', 'bäckerei', 'metzger', 'supermarkt', 'einkauf', 'myprotein', 'protein', 'creatine', 'pettendorfladen'] },
     { name: 'Essen gehen', match: ['mcces', 'mcc', 'mcdonald', 'burger', 'bk', 'kfc', 'döner', 'pizza', 'sushi', 'restaurant', 'mensa', 'cafe', 'café', 'coffe', 'eis', 'pommes', 'lieferando', 'wolt', 'mealmates', 'dult', 'bar', 'kölsch', 'bier', 'biergarten', 'getränke', 'essen'] },
-    { name: 'Wohnen', match: ['miete', 'kaution', 'nebenkosten', 'strom', 'wewash', 'ikea', 'bauhaus', 'möbel', 'tisch', 'airfryer', 'blumenerde'] },
+    { name: 'Wohnen', match: ['miete', 'kaution', 'nebenkosten', 'strom', 'wewash', 'blumenerde'] },
     { name: 'Sport & Freizeit', match: ['fitx', 'gym', 'mcfit', 'tbasv', 'tennis', 'paddle', 'padel', 'fussball', 'sauna', 'therme', 'westbad', 'kino', 'cinemaxx', 'konzert', 'ticket', 'billiard', 'bowling', 'tipico', 'eafc'] },
     { name: 'Urlaub', match: ['urlaub', 'flug', 'flüge', 'hotel', 'airbnb', 'unterkunft', 'unterkünfte', 'kurtaxe', 'thailand', 'chiang', 'doha', 'muy thai', 'wechselstube', '7/11', 'malta', 'prag', 'kroatien'] },
     { name: 'Geschenke', match: ['geschenk', 'blumen', 'gutschein'] },
     { name: 'Kleidung', match: ['zara', 'bershka', 'h&m', 'hundm', 'primark', 'pull&bear', 'zalando', 'snipes', 'uniqlo', 'new yorker', 'deichmann', 'schuhe'] },
-    { name: 'Shopping & Technik', match: ['amazon', 'media markt', 'mediamarkt', 'saturn', 'temu', 'action', 'euroshop', 'tkmaxx', 'apple', 'kabel', 'adapter', 'otto', 'ebay'] },
+    // Shopping: things you buy — tech, furniture, household goods.
+    { name: 'Shopping', match: ['amazon', 'media markt', 'mediamarkt', 'saturn', 'temu', 'action', 'euroshop', 'tkmaxx', 'apple', 'kabel', 'adapter', 'otto', 'ebay', 'ikea', 'bauhaus', 'obi', 'möbel', 'tisch', 'stuhl', 'lampe', 'airfryer', 'jysk', 'xxxlutz', 'poco'] },
 ];
 
 export const FALLBACK = 'Sonstiges';
