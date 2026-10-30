@@ -23,31 +23,15 @@ export default function Overview({ accounts, balances, series, transactions, mon
     return (
         <div className="rise space-y-4">
             {/* Hero: total balance and its trend */}
-            <section className="rounded-[28px] bg-ink px-5 pt-4 pb-4 text-paper">
-                <p className="text-xs opacity-60">{point ? `Ende ${monthLabel(point.key)}` : 'Gesamtvermögen'}</p>
-                <p className="tabular mt-1 text-[30px] leading-none font-semibold tracking-tight">{money(point ? point.value : total)}</p>
+            <section className="rounded-[24px] bg-ink px-4 pt-3.5 pb-3 text-paper">
+                <div className="flex items-baseline justify-between gap-3">
+                    <p className="text-sm opacity-60">{point ? `Ende ${monthLabel(point.key)}` : 'Gesamtvermögen'}</p>
+                    <p className="tabular text-2xl leading-none font-semibold tracking-tight">{money(point ? point.value : total)}</p>
+                </div>
                 <div className="mt-3">
                     <BalanceChart series={series} onActive={setPoint} />
                 </div>
             </section>
-
-            {/* Accounts: compact list with each one's share of the total */}
-            <Card className="px-2 py-2">
-                <ul>
-                    {[...accounts].sort((a, b) => balances[b.id] - balances[a.id]).map((a) => {
-                        const share = total > 0 ? Math.max(0, balances[a.id]) / total : 0;
-                        return (
-                            <li key={a.id}>
-                                <button onClick={() => onAccount(a.id)} className="flex w-full items-center gap-3 rounded-[18px] px-3 py-2 text-left active:bg-ink/5">
-                                    <span className="w-28 shrink-0 truncate text-sm">{a.name}</span>
-                                    <span className="flex-1"><Bar value={share} /></span>
-                                    <span className={`tabular w-24 shrink-0 text-right text-sm font-semibold ${balances[a.id] < 0 ? 'text-expense' : ''}`}>{money(balances[a.id])}</span>
-                                </button>
-                            </li>
-                        );
-                    })}
-                </ul>
-            </Card>
 
             {/* The month at a glance */}
             <Card>
@@ -103,6 +87,24 @@ export default function Overview({ accounts, balances, series, transactions, mon
                         </ul>
                     </div>
                 )}
+            </Card>
+
+            {/* Accounts: compact list with each one's share of the total */}
+            <Card className="px-2 py-2">
+                <ul>
+                    {[...accounts].sort((a, b) => balances[b.id] - balances[a.id]).map((a) => {
+                        const share = total > 0 ? Math.max(0, balances[a.id]) / total : 0;
+                        return (
+                            <li key={a.id}>
+                                <button onClick={() => onAccount(a.id)} className="flex w-full items-center gap-3 rounded-[18px] px-3 py-2 text-left active:bg-ink/5">
+                                    <span className="w-28 shrink-0 truncate text-sm">{a.name}</span>
+                                    <span className="flex-1"><Bar value={share} /></span>
+                                    <span className={`tabular w-24 shrink-0 text-right text-sm font-semibold ${balances[a.id] < 0 ? 'text-expense' : ''}`}>{money(balances[a.id])}</span>
+                                </button>
+                            </li>
+                        );
+                    })}
+                </ul>
             </Card>
 
             <Card className="px-2 pb-2">

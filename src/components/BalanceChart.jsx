@@ -46,7 +46,7 @@ export default function BalanceChart({ series, onActive }) {
     return (
         <div className="grid grid-cols-[1fr_auto] gap-x-3">
             <div
-                className="relative h-24 touch-none select-none"
+                className="relative h-20 touch-none select-none"
                 onPointerDown={pick}
                 onPointerMove={(e) => (e.pointerType === 'mouse' || e.buttons) && pick(e)}
                 onPointerUp={(e) => e.pointerType !== 'mouse' && leave()}
@@ -85,14 +85,14 @@ export default function BalanceChart({ series, onActive }) {
             </div>
 
             {/* Value scale */}
-            <div className="relative h-24 w-9 text-[10px] opacity-50">
+            <div className="relative h-20 w-9 text-[10px] opacity-50">
                 {ticks.map((t) => (
                     <span key={t} className="tabular absolute right-0 -translate-y-1/2" style={{ top: `${y(t)}%` }}>{axisLabel(t)}</span>
                 ))}
             </div>
 
             {/* Month labels: every second month, the latest always */}
-            <div className="relative mt-2 h-4 text-[10px] opacity-50">
+            <div className="relative mt-1.5 h-4 text-[10px] opacity-50">
                 {series.map((p, i) => {
                     const last = i === series.length - 1;
                     if (!last && (series.length - 1 - i) % 2) return null;
