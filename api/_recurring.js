@@ -10,9 +10,10 @@ export function bookingsFor(r, date) {
     if (r.kind === 'transfer') {
         const transfer = `rec-${r.id}-${date}`;
         const name = r.counterparty || 'Umbuchung';
+        const category = r.category === 'Investieren' ? 'Investieren' : 'Umbuchung';
         return [
-            { ...base, id: `${transfer}-out`, account_id: r.account_id, amount: -amount, counterparty: name, category: 'Umbuchung', transfer_id: transfer },
-            { ...base, id: `${transfer}-in`, account_id: r.to_account_id, amount, counterparty: name, category: 'Umbuchung', transfer_id: transfer },
+            { ...base, id: `${transfer}-out`, account_id: r.account_id, amount: -amount, counterparty: name, category, transfer_id: transfer },
+            { ...base, id: `${transfer}-in`, account_id: r.to_account_id, amount, counterparty: name, category, transfer_id: transfer },
         ];
     }
     return [{

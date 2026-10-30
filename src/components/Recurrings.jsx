@@ -1,4 +1,4 @@
-import { ArrowLeftRight, Repeat } from 'lucide-react';
+import { ArrowLeftRight, Repeat, TrendingUp } from 'lucide-react';
 import { CategoryIcon } from '../shared/categoryIcons.jsx';
 import { money } from '../shared/format.js';
 import { nextDate, repeatLabel } from '../shared/repeat.js';
@@ -12,9 +12,9 @@ export default function Recurrings({ recurrings, accounts, onOpen }) {
     const rows = recurrings
         .map((r) => ({ ...r, next: nextDate(r) }))
         .sort((a, b) => (a.next || '9999').localeCompare(b.next || '9999'));
-    const monthly = rows
-        .filter((r) => r.next && r.kind === 'out')
-        .reduce((s, r) => s + Number(r.amount) * ({ week: 52 / 12, month: 1, year: 1 / 12 }[r.interval] / r.every), 0);
+    const perMonth = (r) => Number(r.amount) * ({ week: 52 / 12, month: 1, year: 1 / 12 }[r.interval] / r.every);
+    const monthly = rows.filter((r) => r.next && r.kind === 'out').reduce((s, r) => s + perMonth(r), 0);
+    const investing = rows.filter((r) => r.next && r.category === 'Investieren').reduce((s, r) => s + perMonth(r), 0);
 
     return (
         <Card className="px-2 pb-2">
@@ -25,10 +25,14 @@ export default function Recurrings({ recurrings, accounts, onOpen }) {
                     <li key={r.id}>
                         <button onClick={() => onOpen(r)} className={`flex w-full items-center gap-3 rounded-[20px] px-3 py-2.5 text-left active:bg-ink/5 ${r.next ? '' : 'opacity-45'}`}>
                             {r.kind === 'transfer'
-                                ? <span className="flex size-10 shrink-0 items-center justify-center rounded-full bg-ink/[0.06]"><ArrowLeftRight size={18} strokeWidth={1.8} /></span>
+                                ? (
+                                    <span className="flex size-10 shrink-0 items-center justify-center rounded-full bg-ink/[0.06]">
+                                        {r.category === 'Investieren' ? <TrendingUp size={18} strokeWidth={1.8} /> : <ArrowLeftRight size={18} strokeWidth={1.8} />}
+                                    </span>
+                                )
                                 : <CategoryIcon category={r.category} />}
                             <div className="min-w-0 flex-1">
-                                <p className="truncate text-[15px] font-medium">{r.counterparty || (r.kind === 'transfer' ? 'Umbuchung' : r.category)}</p>
+                                <p className="truncate text-[15px] font-medium">{r.counterparty || (r.kind === 'transfer' ? r.category : r.category)}</p>
                                 <p className="flex items-center gap-1 truncate text-xs text-muted">
                                     <Repeat size={11} className="shrink-0" />
                                     {repeatLabel(r)} · {r.next ? `ab ${shortDate(r.next)}` : 'beendet'}
@@ -43,11 +47,18 @@ export default function Recurrings({ recurrings, accounts, onOpen }) {
                 ))}
             </ul>
             {monthly > 0 && (
-                <p className="flex justify-between px-3 pt-2 pb-2 text-xs text-muted">
+                <p className="flex justify-between px-3 pt-2 text-xs text-muted">
                     <span>Fixe Ausgaben pro Monat</span>
                     <span className="tabular font-semibold text-ink">{money(monthly)}</span>
                 </p>
             )}
+            {investing > 0 && (
+                <p className="flex justify-between px-3 pt-1 text-xs text-muted">
+                    <span>Investiert pro Monat</span>
+                    <span className="tabular font-semibold text-ink">{money(investing)}</span>
+                </p>
+            )}
+            <div className="h-2" />
         </Card>
     );
 }

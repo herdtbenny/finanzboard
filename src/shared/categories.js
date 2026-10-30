@@ -1,50 +1,62 @@
-// The categories, taken over from the MoneyStats backup. The form lists them
-// sorted by how often each was used; categories found in the data but missing
-// here show up there too.
+// Default categories for every Haushalt. The form lists them sorted by how
+// often each was used; categories found in the data but missing here show up
+// there too.
 export const EXPENSE_CATEGORIES = [
-    'Essen & Trinken', 'Sonstiges', 'Geschenke', 'Sprit', 'Kleidung', 'Trade Republic', 'Versicherungen',
-    'Aktivitäten', 'Urlaub', 'Gym', 'Drogerie', 'Miete', 'Umbuchung',
+    'Lebensmittel', 'Essen gehen', 'Mobilität', 'Wohnen', 'Abos & Verträge', 'Versicherungen', 'Kleidung',
+    'Shopping & Technik', 'Drogerie & Gesundheit', 'Sport & Freizeit', 'Urlaub', 'Geschenke', 'Sonstiges',
 ];
-export const INCOME_CATEGORIES = ['Taschengeld', 'Gehalt', 'Sonstiges', 'Umbuchung'];
+export const INCOME_CATEGORIES = ['Gehalt & Jobs', 'Taschengeld', 'Familie', 'Verkäufe', 'Sonstiges'];
 
-// Neither income nor expense: money moved between own accounts, and the
-// corrections that set an account to a known balance.
-export const NEUTRAL_CATEGORIES = ['Umbuchung', 'Kontostand'];
+// Neither income nor expense: money moved between own accounts (Investieren
+// is a transfer into a depot), corrections that set an account to a known
+// balance, and the change in a depot's value.
+export const NEUTRAL_CATEGORIES = ['Umbuchung', 'Investieren', 'Kontostand', 'Wertänderung'];
 export const isNeutral = (t) => NEUTRAL_CATEGORIES.includes(t.category);
 
+// Money coming back in an expense category (a refund, a friend paying their
+// share) lowers that category's spending instead of counting as income.
+export const isRefund = (t) => t.amount > 0 && !INCOME_CATEGORIES.includes(t.category) && !isNeutral(t);
+
 // Keyword rules for names never used before, matched against counterparty +
-// purpose (case-insensitive). First match wins.
+// purpose (case-insensitive; keywords up to 3 letters only as whole words).
+// First match wins. Also used by scripts/recategorize.js.
 export const CATEGORY_RULES = [
-    { name: 'Umbuchung', match: ['umbuchung', 'sparen'] },
-    { name: 'Gehalt', match: ['gehalt', 'lohn'] },
-    { name: 'Taschengeld', match: ['taschengeld', 'zinsen'] },
-    { name: 'Trade Republic', match: ['sparplan', 'etf', 'msci', 'nasdaq', 's&p'] },
-    { name: 'Gym', match: ['fitx', 'gym', 'mcfit'] },
-    { name: 'Sprit', match: ['tank', 'sprit', 'aral', 'shell', 'esso', 'parken', 'parkhaus'] },
-    { name: 'Drogerie', match: ['dm', 'rossmann', 'müller', 'apotheke', 'kontaktlinsen'] },
-    { name: 'Essen & Trinken', match: ['rewe', 'edeka', 'aldi', 'lidl', 'netto', 'penny', 'kaufland', 'bäcker', 'döner', 'mcces', 'mcdonald', 'burger', 'pizza', 'lieferando', 'wolt', 'restaurant', 'café', 'cafe'] },
-    { name: 'Kleidung', match: ['zara', 'bershka', 'h&m', 'hundm', 'primark', 'pull&bear', 'zalando', 'snipes'] },
-    { name: 'Versicherungen', match: ['versicherung', 'icloud', 'klarmobil', 'handyvertrag', 'freenet', 'claude', 'spotify', 'netflix'] },
-    { name: 'Geschenke', match: ['geschenk', 'blumen'] },
-    { name: 'Urlaub', match: ['urlaub', 'flug', 'hotel', 'airbnb', 'kurtaxe'] },
-    { name: 'Aktivitäten', match: ['tennis', 'paddle', 'sauna', 'kino', 'ticket', 'bowling'] },
-    { name: 'Miete', match: ['miete', 'kaution'] },
+    { name: 'Umbuchung', match: ['umbuchung'] },
+    { name: 'Investieren', match: ['sparplan', 'etf', 'msci', 'nasdaq', 's&p'] },
+    { name: 'Gehalt & Jobs', match: ['gehalt', 'lohn', 'aushilf', 'minijob'] },
+    { name: 'Taschengeld', match: ['taschengeld'] },
+    { name: 'Verkäufe', match: ['vinted', 'kleinanzeigen', 'verkauft'] },
+    { name: 'Versicherungen', match: ['versicherung', 'kv', 'sbk', 'aok', 'haftpflicht', 'krankenkasse'] },
+    { name: 'Abos & Verträge', match: ['icloud', 'freenet', 'klarmobil', 'handyvertrag', 'claude', 'chatgpt', 'spotify', 'netflix', 'disney', 'prime', 'moneystats', 'namecheap', 'abo'] },
+    { name: 'Mobilität', match: ['tank', 'sprit', 'aral', 'shell', 'esso', 'parken', 'parkhaus', 'blitzer', 'bolt', 'nextbike', 'scooter', 'eroller', 'deutschland ticket', 'dticket', 'd ticket', 'db', 'bahn', 'zug', 'zugticket', 'zugtickets', 'flixbus', 'maut', 'werkstatt', 'tüv', 'strafzettel'] },
+    { name: 'Drogerie & Gesundheit', match: ['dm', 'rossmann', 'müller', 'apotheke', 'arzt', 'zahn', 'linsen', 'brille', 'impf', 'friseur', 'rasier', 'elmex', 'nasenspray', 'tabletten'] },
+    { name: 'Lebensmittel', match: ['rewe', 'edeka', 'aldi', 'lidl', 'netto', 'penny', 'kaufland', 'norma', 'globus', 'tegut', 'denns', 'alnatura', 'bäcker', 'bäckerei', 'metzger', 'supermarkt', 'einkauf', 'myprotein', 'protein', 'creatine', 'pettendorfladen'] },
+    { name: 'Essen gehen', match: ['mcces', 'mcc', 'mcdonald', 'burger', 'bk', 'kfc', 'döner', 'pizza', 'sushi', 'restaurant', 'mensa', 'cafe', 'café', 'coffe', 'eis', 'pommes', 'lieferando', 'wolt', 'mealmates', 'dult', 'bar', 'kölsch', 'bier', 'biergarten', 'getränke', 'essen'] },
+    { name: 'Wohnen', match: ['miete', 'kaution', 'nebenkosten', 'strom', 'wewash', 'ikea', 'bauhaus', 'möbel', 'tisch', 'airfryer', 'blumenerde'] },
+    { name: 'Sport & Freizeit', match: ['fitx', 'gym', 'mcfit', 'tbasv', 'tennis', 'paddle', 'padel', 'fussball', 'sauna', 'therme', 'westbad', 'kino', 'cinemaxx', 'konzert', 'ticket', 'billiard', 'bowling', 'tipico', 'eafc'] },
+    { name: 'Urlaub', match: ['urlaub', 'flug', 'flüge', 'hotel', 'airbnb', 'unterkunft', 'unterkünfte', 'kurtaxe', 'thailand', 'chiang', 'doha', 'muy thai', 'wechselstube', '7/11', 'malta', 'prag', 'kroatien'] },
+    { name: 'Geschenke', match: ['geschenk', 'blumen', 'gutschein'] },
+    { name: 'Kleidung', match: ['zara', 'bershka', 'h&m', 'hundm', 'primark', 'pull&bear', 'zalando', 'snipes', 'uniqlo', 'new yorker', 'deichmann', 'schuhe'] },
+    { name: 'Shopping & Technik', match: ['amazon', 'media markt', 'mediamarkt', 'saturn', 'temu', 'action', 'euroshop', 'tkmaxx', 'apple', 'kabel', 'adapter', 'otto', 'ebay'] },
 ];
 
 export const FALLBACK = 'Sonstiges';
 
+const escapeRe = (s) => s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+
 function matchesWord(text, word) {
-    // Short keywords like "dm" only as a whole word, not inside "admin".
     if (word.length > 3) return text.includes(word);
-    return new RegExp(`(^|[^a-zäöüß])${word.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}($|[^a-zäöüß])`).test(text);
+    return new RegExp(`(^|[^a-zäöüß])${escapeRe(word)}($|[^a-zäöüß])`).test(text);
+}
+
+// The first rule that matches, or null.
+export function ruleFor(text) {
+    const lower = String(text || '').toLowerCase();
+    return CATEGORY_RULES.find((rule) => rule.match.some((word) => matchesWord(lower, word)))?.name || null;
 }
 
 export function categorize(t) {
-    const text = `${t.counterparty || ''} ${t.purpose || ''}`.toLowerCase();
-    for (const rule of CATEGORY_RULES) {
-        if (rule.match.some((word) => matchesWord(text, word))) return rule.name;
-    }
-    return FALLBACK;
+    return ruleFor(`${t.counterparty || ''} ${t.purpose || ''}`) || FALLBACK;
 }
 
 export const categoryOf = (t) => t.category || categorize(t);
@@ -54,22 +66,23 @@ export function categoryMemory(transactions) {
     const counts = {};
     for (const t of transactions) {
         const key = (t.counterparty || '').trim().toLowerCase();
-        if (!key || t.category === 'Kontostand') continue;
+        if (!key || isNeutral(t)) continue;
         counts[key] ??= {};
         counts[key][t.category] = (counts[key][t.category] || 0) + 1;
     }
     return Object.fromEntries(Object.entries(counts).map(([k, c]) => [k, Object.entries(c).sort((a, b) => b[1] - a[1])[0][0]]));
 }
 
-// Categories for the form: the defaults plus any found in the data for that
-// direction, most used first.
+// Category chips for the form: the defaults of that direction plus any found
+// in the data, most used first. A refund keeps its expense category, so
+// income chips also list the expense categories after the income ones.
 export function categoryOptions(transactions, kind) {
     const usage = {};
     for (const t of transactions) {
-        if ((kind === 'out') !== (t.amount < 0) || t.category === 'Kontostand') continue;
+        if (isNeutral(t) || (kind === 'out') !== (t.amount < 0)) continue;
         usage[t.category] = (usage[t.category] || 0) + 1;
     }
     const defaults = kind === 'out' ? EXPENSE_CATEGORIES : INCOME_CATEGORIES;
-    const all = [...new Set([...defaults, ...Object.keys(usage)])];
-    return all.sort((a, b) => (usage[b] || 0) - (usage[a] || 0));
+    const sorted = [...new Set([...defaults, ...Object.keys(usage)])].sort((a, b) => (usage[b] || 0) - (usage[a] || 0));
+    return kind === 'out' ? sorted : [...new Set([...sorted, ...EXPENSE_CATEGORIES])];
 }

@@ -1,7 +1,7 @@
 import { ACCOUNT_COLUMNS, db } from './_lib.js';
 
-// POST { id, name, opening_balance, sort_order } creates or updates an account
-// in the picked Haushalt. DELETE ?id=… removes it with all its transactions.
+// POST { id, name, kind, opening_balance, sort_order } creates or updates an
+// account in the picked Haushalt; kind 'depot' = value entered by hand. DELETE ?id=… removes it with all its transactions.
 export default async function handler(req, res) {
     const s = await db(req, res);
     if (!s) return;
@@ -24,6 +24,7 @@ export default async function handler(req, res) {
         id: a.id,
         space_id: spaceId,
         name: a.name.trim(),
+        kind: a.kind === 'depot' ? 'depot' : 'cash',
         opening_balance: Math.round(opening * 100) / 100,
         sort_order: Number(a.sort_order) || 0,
     }).select(ACCOUNT_COLUMNS).single();

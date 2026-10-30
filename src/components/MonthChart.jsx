@@ -1,5 +1,5 @@
-import { isNeutral } from '../shared/categories.js';
-import { monthKey, monthLabel, moneyShort, shiftMonth } from '../shared/format.js';
+import { monthLabel, moneyShort, shiftMonth } from '../shared/format.js';
+import { monthSummary } from '../shared/insights.js';
 
 const MONTHS = 6;
 
@@ -10,13 +10,7 @@ export default function MonthChart({ transactions, month, onSelect }) {
     const end = month < shiftMonth(now, -(MONTHS - 1)) ? shiftMonth(month, MONTHS - 1) : now;
     const keys = Array.from({ length: MONTHS }, (_, i) => shiftMonth(end, i - (MONTHS - 1)));
 
-    const totals = Object.fromEntries(keys.map((k) => [k, { in: 0, out: 0 }]));
-    for (const t of transactions) {
-        const k = monthKey(t.booking_date);
-        if (!totals[k] || isNeutral(t)) continue;
-        if (t.amount > 0) totals[k].in += t.amount;
-        else totals[k].out -= t.amount;
-    }
+    const totals = Object.fromEntries(keys.map((k) => [k, monthSummary(transactions, k)]));
     const max = Math.max(1, ...keys.flatMap((k) => [totals[k].in, totals[k].out]));
 
     return (

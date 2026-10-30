@@ -18,4 +18,4 @@ export function mergeTransfers(transactions) {
     return out;
 }
 
-export const transferTitle = (t) => (t.counterparty && t.counterparty !== 'Umbuchung' ? t.counterparty : 'Umbuchung');
+export const transferTitle = (t) => (t.counterparty && !['Umbuchung', 'Investieren'].includes(t.counterparty) ? t.counterparty : t.category);

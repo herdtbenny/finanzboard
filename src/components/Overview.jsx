@@ -31,13 +31,13 @@ export default function Overview({ accounts, balances, series, transactions, mon
                 <div className="mt-2 flex min-h-6 flex-wrap items-center gap-1.5">
                     {!point && (
                         <>
-                            <span className="inline-flex items-center gap-1 rounded-full bg-paper/10 px-2.5 py-1 text-xs font-medium">
+                            <span className={`inline-flex items-center gap-1 rounded-full bg-paper/10 px-2.5 py-1 text-xs font-medium ${change >= 0 ? 'text-hero-up' : 'text-hero-down'}`}>
                                 {change >= 0 ? <ArrowUpRight size={14} /> : <ArrowDownRight size={14} />}
                                 {change >= 0 ? '+' : ''}{money(change)} diesen Monat
                             </span>
                             {usual != null && (
-                                <span className="tabular rounded-full px-1 py-1 text-xs opacity-60">
-                                    Ø {usual >= 0 ? '+' : ''}{moneyShort(usual)} pro Monat
+                                <span className={`tabular inline-flex items-center rounded-full bg-paper/10 px-2.5 py-1 text-xs font-medium ${change - usual >= 0 ? 'text-hero-up' : 'text-hero-down'}`}>
+                                    {change - usual >= 0 ? '+' : '−'}{moneyShort(Math.abs(change - usual))} {change - usual >= 0 ? 'über' : 'unter'} Ø ({moneyShort(usual)})
                                 </span>
                             )}
                         </>
@@ -83,6 +83,12 @@ export default function Overview({ accounts, balances, series, transactions, mon
                         {summary.rate != null && summary.net > 0 && <span className="ml-1.5 font-normal text-muted">· {Math.round(summary.rate * 100)} % gespart</span>}
                     </span>
                 </div>
+                {summary.invested > 0 && (
+                    <div className="mt-2 flex items-center justify-between px-4 text-sm">
+                        <span className="text-muted">Investiert</span>
+                        <span className="tabular font-semibold">{money(summary.invested)}</span>
+                    </div>
+                )}
                 {top.length > 0 && (
                     <div className="mt-5">
                         <div className="mb-3 flex items-center justify-between">

@@ -1,10 +1,11 @@
 import { useState } from 'react';
 import { ArrowDown, Repeat, Trash2 } from 'lucide-react';
-import { categorize } from '../shared/categories.js';
+import { categorize, FALLBACK, NEUTRAL_CATEGORIES } from '../shared/categories.js';
 import { amountInput, newId, parseAmount, todayIso } from '../shared/format.js';
 import { REPEATS } from '../shared/repeat.js';
 import Sheet, { Field, inputClass } from './Sheet.jsx';
 import ReceiptScanner from './ReceiptScanner.jsx';
+import CategoryPicker from './CategoryPicker.jsx';
 
 const KINDS = [['out', 'Ausgabe', 'bg-expense text-white'], ['in', 'Einnahme', 'bg-income text-white'], ['transfer', 'Umbuchung', 'bg-ink text-paper']];
 
@@ -25,7 +26,7 @@ export default function TransactionSheet({
 
     const [kind, setKind] = useState(initialKind);
     const [amount, setAmount] = useState(amountInput(src.amount));
-    const [counterparty, setCounterparty] = useState(entry?.transfer && src.counterparty === 'Umbuchung' ? '' : src.counterparty || '');
+    const [counterparty, setCounterparty] = useState(entry?.transfer && ['Umbuchung', 'Investieren'].includes(src.counterparty) ? '' : src.counterparty || '');
     const [purpose, setPurpose] = useState(src.purpose || '');
     const [date, setDate] = useState(recurring?.start_date || entry?.booking_date || todayIso());
     const fallbackAccount = lastAccountId || accounts[0]?.id;
@@ -40,7 +41,11 @@ export default function TransactionSheet({
 
     const transfer = kind === 'transfer';
     const value = parseAmount(amount);
-    const suggested = memory[counterparty.trim().toLowerCase()] || categorize({ counterparty, purpose });
+    const guess = memory[counterparty.trim().toLowerCase()] || categorize({ counterparty, purpose });
+    const suggested = NEUTRAL_CATEGORIES.includes(guess) ? FALLBACK : guess;
+    // A transfer into a depot account counts as investing.
+    const investing = kind === 'transfer' && accounts.find((a) => a.id === toAccountId)?.kind === 'depot';
+    const transferCategory = investing ? 'Investieren' : 'Umbuchung';
     const shownCategory = category || suggested;
     const valid = Number.isFinite(value) && value !== 0 && accountId && date && (!transfer || (toAccountId && toAccountId !== accountId));
     // Editing can't turn a transfer into a single booking or back.
@@ -82,7 +87,7 @@ export default function TransactionSheet({
                 to_account_id: transfer ? toAccountId : null,
                 amount: abs,
                 counterparty,
-                category: transfer ? 'Umbuchung' : shownCategory,
+                category: transfer ? transferCategory : shownCategory,
                 purpose,
                 interval,
                 every: Number(every),
@@ -93,7 +98,7 @@ export default function TransactionSheet({
 
         if (transfer) {
             const tid = entry?.transfer?.from.transfer_id || newId();
-            const shared = { booking_date: date, counterparty: counterparty || 'Umbuchung', purpose, category: 'Umbuchung', transfer_id: tid, recurring_id: entry?.recurring_id || null };
+            const shared = { booking_date: date, counterparty: counterparty || (investing ? 'Investieren' : 'Umbuchung'), purpose, category: transferCategory, transfer_id: tid, recurring_id: entry?.recurring_id || null };
             return run(() => onSaveTransactions([
                 { ...shared, id: entry?.transfer?.from.id || `${tid}-out`, account_id: accountId, amount: -abs },
                 { ...shared, id: entry?.transfer?.to.id || `${tid}-in`, account_id: toAccountId, amount: abs },
@@ -163,6 +168,7 @@ export default function TransactionSheet({
                         <div className="flex justify-center"><ArrowDown size={18} className="text-muted" /></div>
                         <Field label="Nach">{accountSelect(toAccountId, setToAccountId, accountId)}</Field>
                         {accounts.length < 2 && <p className="px-1 text-xs text-expense">Für eine Umbuchung brauchst du mindestens zwei Konten.</p>}
+                        {investing && <p className="px-1 text-xs text-muted">Zählt als Investieren, nicht als Ausgabe.</p>}
                     </div>
                 ) : (
                     <>
@@ -180,18 +186,13 @@ export default function TransactionSheet({
                         </Field>
 
                         <Field label="Kategorie">
-                            <div className="flex flex-wrap gap-2">
-                                {optionsFor(kind).filter((c) => c !== 'Umbuchung').map((c) => (
-                                    <button
-                                        key={c}
-                                        type="button"
-                                        onClick={() => setCategory(c)}
-                                        className={`rounded-full border px-3 py-1.5 text-sm ${shownCategory === c ? 'border-ink bg-ink text-paper' : 'border-line bg-card'}`}
-                                    >
-                                        {c}
-                                    </button>
-                                ))}
-                            </div>
+                            <CategoryPicker
+                                key={kind}
+                                options={optionsFor(kind).filter((c) => !NEUTRAL_CATEGORIES.includes(c))}
+                                value={shownCategory}
+                                picked={Boolean(category)}
+                                onPick={setCategory}
+                            />
                         </Field>
                     </>
                 )}

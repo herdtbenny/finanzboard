@@ -1,5 +1,5 @@
 import { useMemo, useState } from 'react';
-import { ArrowLeftRight, ChevronDown, Repeat, Search, X } from 'lucide-react';
+import { ArrowLeftRight, ChevronDown, Repeat, Search, TrendingUp, X } from 'lucide-react';
 import { CategoryIcon } from '../shared/categoryIcons.jsx';
 import { dayLabel, money, monthKey } from '../shared/format.js';
 import { mergeTransfers, transferTitle } from '../shared/transfers.js';
@@ -22,7 +22,11 @@ export function TransactionRow({ t, onOpen, showDate, names }) {
         <li>
             <button onClick={() => onOpen(t)} className="flex w-full items-center gap-3 rounded-[20px] px-3 py-2.5 text-left active:bg-ink/5">
                 {isTransfer
-                    ? <span className="flex size-10 shrink-0 items-center justify-center rounded-full bg-ink/[0.06]"><ArrowLeftRight size={18} strokeWidth={1.8} /></span>
+                    ? (
+                        <span className="flex size-10 shrink-0 items-center justify-center rounded-full bg-ink/[0.06]">
+                            {t.category === 'Investieren' ? <TrendingUp size={18} strokeWidth={1.8} /> : <ArrowLeftRight size={18} strokeWidth={1.8} />}
+                        </span>
+                    )
                     : <CategoryIcon category={t.category} />}
                 <div className="min-w-0 flex-1">
                     <p className="flex items-center gap-1.5 truncate text-[15px] font-medium">

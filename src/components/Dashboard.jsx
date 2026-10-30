@@ -145,7 +145,7 @@ export default function Dashboard({ token, me, space, onSpace, onMeChanged, onLo
         content = (
             <Accounts
                 token={token} me={me} onMeChanged={onMeChanged} accounts={accounts} balances={balances} transactions={transactions}
-                onSave={saveAccount} onDelete={deleteAccount} onLogout={onLogout}
+                onSave={saveAccount} onDelete={deleteAccount} onSaveTransactions={saveTransactions} onLogout={onLogout}
             />
         );
     }

@@ -1,20 +1,26 @@
-import { isNeutral } from './categories.js';
+import { isNeutral, isRefund } from './categories.js';
 import { monthKey, shiftMonth } from './format.js';
 
 export const currentMonth = () => new Date().toISOString().slice(0, 7);
 
-// Income, expenses and expenses per category of one month. Transfers and
-// balance corrections are left out.
+// Income, expenses and expenses per category of one month. Transfers,
+// balance corrections and depot value changes are left out; refunds lower
+// their category's expenses; `invested` is what went into a depot.
 export function monthSummary(transactions, key) {
-    const s = { in: 0, out: 0, byCategory: {} };
+    const s = { in: 0, out: 0, invested: 0, byCategory: {} };
     for (const t of transactions) {
-        if (monthKey(t.booking_date) !== key || isNeutral(t)) continue;
-        if (t.amount > 0) s.in += t.amount;
+        if (monthKey(t.booking_date) !== key) continue;
+        if (t.category === 'Investieren' && t.amount > 0) s.invested += t.amount;
+        if (isNeutral(t)) continue;
+        if (t.amount > 0 && !isRefund(t)) s.in += t.amount;
         else {
             s.out -= t.amount;
             s.byCategory[t.category] = (s.byCategory[t.category] || 0) - t.amount;
         }
     }
+    // A category can end up at zero or below when refunds outweigh it.
+    for (const [c, v] of Object.entries(s.byCategory)) if (v <= 0.005) delete s.byCategory[c];
+    s.out = Math.max(0, s.out);
     s.net = s.in - s.out;
     s.rate = s.in > 0 ? s.net / s.in : null;
     return s;

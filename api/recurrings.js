@@ -43,7 +43,7 @@ export default async function handler(req, res) {
         to_account_id: r.kind === 'transfer' ? r.to_account_id : null,
         amount,
         counterparty: r.counterparty?.trim() || null,
-        category: r.kind === 'transfer' ? 'Umbuchung' : r.category || null,
+        category: r.kind === 'transfer' ? (r.category === 'Investieren' ? 'Investieren' : 'Umbuchung') : r.category || null,
         purpose: r.purpose?.trim() || null,
         interval: r.interval,
         every: Math.max(1, Number(r.every) || 1),
