@@ -77,15 +77,15 @@ export default function Overview({ accounts, balances, series, transactions, mon
                     <Figure label="Ausgaben" value={summary.out} dot="bg-expense" />
                 </div>
                 <div className="mt-5 flex items-center justify-between rounded-2xl bg-ink/[0.04] px-4 py-3 text-sm">
-                    <span className="text-muted">Übrig</span>
+                    <span className="text-muted">Gespart</span>
                     <span className={`tabular font-semibold ${summary.net < 0 ? 'text-expense' : 'text-income'}`}>
                         {summary.net >= 0 ? '+' : ''}{money(summary.net)}
-                        {summary.rate != null && summary.net > 0 && <span className="ml-1.5 font-normal text-muted">· {Math.round(summary.rate * 100)} % gespart</span>}
+                        {summary.rate != null && summary.net > 0 && <span className="ml-1.5 font-normal text-muted">· {Math.round(summary.rate * 100)} %</span>}
                     </span>
                 </div>
                 {summary.invested > 0 && (
                     <div className="mt-2 flex items-center justify-between px-4 text-sm">
-                        <span className="text-muted">Investiert</span>
+                        <span className="text-muted">davon investiert</span>
                         <span className="tabular font-semibold">{money(summary.invested)}</span>
                     </div>
                 )}
