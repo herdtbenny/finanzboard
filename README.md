@@ -5,7 +5,7 @@ ohne Bankverbindung. Daten liegen in **Supabase**, die App läuft auf **Vercel**
 auf dem Handy als App installierbar („Zum Home-Bildschirm“).
 
 ## Personen und Haushalte
-- Jede Person meldet sich mit **Name + Passwort** an und bleibt auf dem Gerät 180 Tage angemeldet. Personen liegen in der
+- Jede Person meldet sich mit **Name + Passwort** an und bleibt angemeldet, solange die App mindestens alle 7 Tage benutzt wird; nach 7 Tagen ohne Nutzung wird abgemeldet. Personen liegen in der
   Datenbank, Passwörter gehasht (scrypt).
 - Daten (Konten, Umsätze, Daueraufträge) gehören zu einem **Haushalt**. Eine Person kann in
   mehreren Haushalten sein, mehrere Personen können sich einen teilen – z. B. „Mama“, „Papa“

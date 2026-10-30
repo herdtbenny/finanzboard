@@ -29,9 +29,12 @@ export function checkPassword(password, stored) {
 
 // ---------- Sessions ----------
 // A session token is "<user id>.<expiry>.<signature>", signed with
-// DASHBOARD_SESSION_SECRET; nothing is stored. Valid for 180 days.
+// DASHBOARD_SESSION_SECRET; nothing is stored. It expires after 7 days
+// without use: every signed-in request answers with a fresh token
+// (X-Session-Token header) that the app stores, so using the app keeps you
+// logged in and a device left alone for a week is logged out.
 
-const SESSION_DAYS = 180;
+const SESSION_DAYS = 7;
 const sign = (value) => crypto.createHmac('sha256', process.env.DASHBOARD_SESSION_SECRET || '').update(value).digest('base64url');
 
 export function makeToken(userId) {
@@ -69,6 +72,7 @@ export async function session(req, res) {
         res.status(401).json({ error: 'Nicht angemeldet' });
         return null;
     }
+    res.setHeader('X-Session-Token', makeToken(user.id));
     const { data: rows } = await client.from('memberships').select('spaces(id,name)').eq('user_id', user.id);
     const spaces = (rows || []).map((r) => r.spaces).filter(Boolean).sort((a, b) => a.name.localeCompare(b.name));
     return { client, user, spaces };
