@@ -47,10 +47,10 @@ export default function MonthCard({ transactions, month, onMonth, onAll }) {
             <div className="mt-4 rounded-2xl bg-ink/[0.04] px-4 py-3.5">
                 <div className="flex items-center justify-between gap-3">
                     <div>
-                        <p className="text-sm text-muted">Gespart</p>
-                        {summary.rate != null && summary.net >= 0 && <p className="text-xs text-muted">{Math.round(summary.rate * 100)} % der Einnahmen</p>}
+                        <p className="text-xs text-muted">Gespart</p>
+                        {summary.rate != null && summary.net >= 0 && <p className="text-[11px] text-muted">{Math.round(summary.rate * 100)} % der Einnahmen</p>}
                     </div>
-                    <span className={`tabular text-2xl font-semibold tracking-tight ${summary.net < 0 ? 'text-expense' : 'text-income'}`}>
+                    <span className={`tabular text-lg font-semibold tracking-tight ${summary.net < 0 ? 'text-expense' : 'text-income'}`}>
                         {summary.net >= 0 ? '+' : ''}{money(summary.net)}
                     </span>
                 </div>
@@ -116,10 +116,10 @@ function Compare({ label, base, value }) {
     const diff = value - base;
     const up = diff >= 0;
     return (
-        <p className="flex items-start gap-1.5 text-sm leading-snug">
+        <p className="flex items-start gap-1 text-xs leading-snug">
             {up
-                ? <ArrowUpRight size={15} className="mt-0.5 shrink-0 text-income" />
-                : <ArrowDownRight size={15} className="mt-0.5 shrink-0 text-expense" />}
+                ? <ArrowUpRight size={13} className="mt-px shrink-0 text-income" />
+                : <ArrowDownRight size={13} className="mt-px shrink-0 text-expense" />}
             <span>
                 <span className={`tabular font-semibold ${up ? 'text-income' : 'text-expense'}`}>{money(Math.abs(diff))} {up ? 'mehr' : 'weniger'}</span>
                 <span className="text-muted"> gespart {label} <span className="tabular whitespace-nowrap">({money(base)})</span></span>
