@@ -33,7 +33,7 @@ for (let from = 0; ; from += 1000) {
 
 const RENAME = {
     Gehalt: 'Gehalt & Jobs', Sprit: 'Mobilität', Gym: 'Sport & Freizeit', Aktivitäten: 'Sport & Freizeit',
-    Miete: 'Wohnen', Drogerie: 'Drogerie & Gesundheit', Kleidung: 'Kleidung', Urlaub: 'Urlaub', Geschenke: 'Geschenke',
+    Miete: 'Wohnen', Drogerie: 'Drogerie & Gesundheit', Kleidung: 'Shopping', Urlaub: 'Urlaub', Geschenke: 'Geschenke',
 };
 const REFUND = ['zurück', 'rückzahlung', 'refund', 'storno', 'anteil', 'erstattung', 'bonus', 'gutschrift', 'zuschuss'];
 const FAMILY = ['oma', 'opa', 'mama', 'papa', 'eltern', 'geburtstag', 'weihnacht', 'ostern', 'spritze', 'zuschuss', 'evelyne'];

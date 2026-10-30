@@ -2,7 +2,7 @@
 // often each was used; categories found in the data but missing here show up
 // there too.
 export const EXPENSE_CATEGORIES = [
-    'Lebensmittel', 'Essen gehen', 'Mobilität', 'Wohnen', 'Abos & Verträge', 'Versicherungen', 'Kleidung',
+    'Lebensmittel', 'Essen gehen', 'Mobilität', 'Wohnen', 'Abos & Verträge', 'Versicherungen',
     'Shopping', 'Drogerie & Gesundheit', 'Sport & Freizeit', 'Urlaub', 'Geschenke', 'Sonstiges',
 ];
 export const INCOME_CATEGORIES = ['Gehalt & Jobs', 'Taschengeld', 'Familie', 'Verkäufe', 'Sonstiges'];
@@ -45,9 +45,8 @@ export const CATEGORY_RULES = [
     { name: 'Sport & Freizeit', match: ['fitx', 'gym', 'mcfit', 'tbasv', 'tennis', 'paddle', 'padel', 'fussball', 'sauna', 'therme', 'westbad', 'kino', 'cinemaxx', 'konzert', 'ticket', 'billiard', 'bowling', 'tipico', 'eafc'] },
     { name: 'Urlaub', match: ['urlaub', 'flug', 'flüge', 'hotel', 'airbnb', 'unterkunft', 'unterkünfte', 'kurtaxe', 'thailand', 'chiang', 'doha', 'muy thai', 'wechselstube', '7/11', 'malta', 'prag', 'kroatien'] },
     { name: 'Geschenke', match: ['geschenk', 'blumen', 'gutschein'] },
-    { name: 'Kleidung', match: ['zara', 'bershka', 'h&m', 'hundm', 'primark', 'pull&bear', 'zalando', 'snipes', 'uniqlo', 'new yorker', 'deichmann', 'schuhe'] },
-    // Shopping: things you buy — tech, furniture, household goods.
-    { name: 'Shopping', match: ['amazon', 'media markt', 'mediamarkt', 'saturn', 'temu', 'action', 'euroshop', 'tkmaxx', 'apple', 'kabel', 'adapter', 'otto', 'ebay', 'ikea', 'bauhaus', 'obi', 'möbel', 'tisch', 'stuhl', 'lampe', 'airfryer', 'jysk', 'xxxlutz', 'poco'] },
+    // Shopping: things you buy — clothes, tech, furniture, household goods.
+    { name: 'Shopping', match: ['zara', 'bershka', 'h&m', 'hundm', 'primark', 'pull&bear', 'zalando', 'snipes', 'uniqlo', 'new yorker', 'deichmann', 'schuhe', 'kleidung', 'jacke', 'hose', 'shirt', 'pulli', 'amazon', 'media markt', 'mediamarkt', 'saturn', 'temu', 'action', 'euroshop', 'tkmaxx', 'apple', 'kabel', 'adapter', 'otto', 'ebay', 'ikea', 'bauhaus', 'obi', 'möbel', 'tisch', 'stuhl', 'lampe', 'airfryer', 'jysk', 'xxxlutz', 'poco'] },
 ];
 
 export const FALLBACK = 'Sonstiges';

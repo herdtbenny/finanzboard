@@ -23,7 +23,6 @@ const ICONS = {
     Wohnen: Home,
     'Abos & Verträge': FileText,
     Versicherungen: ShieldCheck,
-    Kleidung: Shirt,
     Shopping: ShoppingBag,
     'Drogerie & Gesundheit': HeartPulse,
     'Sport & Freizeit': Bike,
