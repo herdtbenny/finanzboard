@@ -25,7 +25,7 @@ Bank ──PSD2──▶ Enable Banking ──REST──▶ /api/sync (Vercel-Cr
    - Environment: **Production**
    - Name: z. B. `Finanzboard`
    - Redirect URLs: `https://<deine-domain>/api/callback`
-     (für lokale Tests zusätzlich `http://localhost:3000/api/callback`)
+     (für lokale Tests zusätzlich `http://localhost:5173/api/callback`)
    - Den Haken bei „Generate private RSA key in the browser“ setzen. Die `.pem`-Datei wird heruntergeladen.
      **Gut aufheben, nie committen.**
 3. Die angezeigte **Application ID** kopieren.
@@ -70,10 +70,10 @@ Bank ──PSD2──▶ Enable Banking ──REST──▶ /api/sync (Vercel-Cr
 ## Lokal entwickeln
 ```bash
 npm install
-cp .env.example .env.local   # ausfüllen, APP_URL=http://localhost:3000
-npx vercel dev               # startet Frontend + /api auf :3000
+cp .env.example .env.local   # ausfüllen, APP_URL=http://localhost:5173
+npm run dev                  # startet Frontend + /api auf :5173
 ```
-`npm run dev` startet nur das Frontend ohne API.
+Die Funktionen in `api/` laufen dabei direkt im Vite-Server (`vite.config.js`).
 
 ## Kategorien anpassen
 `src/shared/categories.js`: Stichwort-Regeln, erste passende gewinnt. Die Kategorien
