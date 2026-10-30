@@ -43,28 +43,29 @@ export default function MonthCard({ transactions, month, onMonth, onAll }) {
                 <Flow label="Einnahmen" count={nIn} value={summary.in} share={summary.in / scale} tone="bg-income" />
                 <Flow label="Ausgaben" count={nOut} value={summary.out} share={summary.out / scale} tone="bg-expense" />
             </div>
-            <div className="mt-3 flex items-center justify-between gap-3 rounded-2xl bg-ink/[0.04] px-4 py-2.5">
-                <div>
-                    <p className="text-sm text-muted">Gespart</p>
-                    {summary.rate != null && summary.net >= 0 && <p className="text-xs text-muted">{Math.round(summary.rate * 100)} % der Einnahmen</p>}
+            {/* Saved, with how it compares — one box */}
+            <div className="mt-3 rounded-2xl bg-ink/[0.04] px-4 py-3">
+                <div className="flex items-center justify-between gap-3">
+                    <div>
+                        <p className="text-sm text-muted">Gespart</p>
+                        {summary.rate != null && summary.net >= 0 && <p className="text-xs text-muted">{Math.round(summary.rate * 100)} % der Einnahmen</p>}
+                    </div>
+                    <span className={`tabular text-lg font-semibold ${summary.net < 0 ? 'text-expense' : 'text-income'}`}>
+                        {summary.net >= 0 ? '+' : ''}{money(summary.net)}
+                    </span>
                 </div>
-                <span className={`tabular text-lg font-semibold ${summary.net < 0 ? 'text-expense' : 'text-income'}`}>
-                    {summary.net >= 0 ? '+' : ''}{money(summary.net)}
-                </span>
+                {(prev != null || usual != null || Math.abs(valueChange) > 0.005) && (
+                    <div className="mt-2.5 space-y-1.5 border-t border-line pt-2.5">
+                        {prev != null && <Compare label={`als im ${prevName}`} base={prev} value={summary.net} />}
+                        {usual != null && <Compare label={`als im Schnitt ${avgFrom}–${avgTo}`} base={usual} value={summary.net} />}
+                        {Math.abs(valueChange) > 0.005 && (
+                            <p className="tabular text-xs text-muted">
+                                Depot {valueChange >= 0 ? '+' : ''}{money(valueChange)} → Vermögen {summary.net + valueChange >= 0 ? '+' : ''}{money(summary.net + valueChange)}
+                            </p>
+                        )}
+                    </div>
+                )}
             </div>
-            {Math.abs(valueChange) > 0.005 && (
-                <p className="tabular mt-1.5 px-1 text-xs text-muted">
-                    Depot {valueChange >= 0 ? '+' : ''}{money(valueChange)} → Vermögen {summary.net + valueChange >= 0 ? '+' : ''}{money(summary.net + valueChange)}
-                </p>
-            )}
-
-            {/* Compared with last month and the usual month */}
-            {(prev != null || usual != null) && (
-                <div className="mt-3 space-y-1.5">
-                    {prev != null && <Compare label={`als im ${prevName}`} base={prev} value={summary.net} />}
-                    {usual != null && <Compare label={`als im Schnitt ${avgFrom}–${avgTo}`} base={usual} value={summary.net} />}
-                </div>
-            )}
 
             {top.length > 0 && (
                 <div className="mt-5">
@@ -115,7 +116,7 @@ function Compare({ label, base, value }) {
     const diff = value - base;
     const up = diff >= 0;
     return (
-        <p className="flex items-start gap-1.5 px-1 text-sm leading-snug">
+        <p className="flex items-start gap-1.5 text-sm leading-snug">
             {up
                 ? <ArrowUpRight size={15} className="mt-0.5 shrink-0 text-income" />
                 : <ArrowDownRight size={15} className="mt-0.5 shrink-0 text-expense" />}
