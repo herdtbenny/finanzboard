@@ -87,3 +87,20 @@ export function usualChange(transactions, key, n = 6) {
     }
     return changes.length ? changes.reduce((s, c) => s + c, 0) / changes.length : null;
 }
+
+// Average of what was saved (income − expenses) in the `n` months before
+// `key` that have data.
+export function usualSaved(transactions, key, n = 6) {
+    const firstKey = transactions.length ? monthKey(transactions[transactions.length - 1].booking_date) : key;
+    const saved = [];
+    for (let i = 1; i <= n; i++) {
+        const k = shiftMonth(key, -i);
+        if (k < firstKey) break;
+        saved.push(monthSummary(transactions, k).net);
+    }
+    return saved.length ? saved.reduce((s, v) => s + v, 0) / saved.length : null;
+}
+
+export function hasMonth(transactions, key) {
+    return transactions.length > 0 && monthKey(transactions[transactions.length - 1].booking_date) <= key;
+}
