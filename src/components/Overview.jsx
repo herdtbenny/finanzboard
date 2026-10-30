@@ -55,15 +55,19 @@ export default function Overview({ accounts, balances, series, transactions, mon
                     <h2 className="text-[15px] font-semibold">Monat</h2>
                     <MonthSwitch month={month} onChange={onMonth} />
                 </div>
-                <div className="-mt-1 mb-5 flex flex-wrap gap-1.5">
-                    <span className={`tabular inline-flex items-center gap-1 rounded-full px-2.5 py-1 text-xs font-medium ${change >= 0 ? 'bg-income/10 text-income' : 'bg-expense/10 text-expense'}`}>
-                        {change >= 0 ? <ArrowUpRight size={14} /> : <ArrowDownRight size={14} />}
-                        Vermögen {change >= 0 ? '+' : ''}{money(change)}
-                    </span>
+                {/* Wealth change of the month and how it compares — side by side */}
+                <div className="-mt-1 mb-5 grid grid-cols-2 gap-2">
+                    <div className={`rounded-2xl px-3 py-2 ${change >= 0 ? 'bg-income/10 text-income' : 'bg-expense/10 text-expense'}`}>
+                        <p className="flex items-center gap-1 text-[11px] opacity-80">
+                            {change >= 0 ? <ArrowUpRight size={12} /> : <ArrowDownRight size={12} />} Vermögen
+                        </p>
+                        <p className="tabular truncate text-sm font-semibold">{change >= 0 ? '+' : ''}{money(change)}</p>
+                    </div>
                     {usual != null && (
-                        <span className={`tabular inline-flex items-center rounded-full px-2.5 py-1 text-xs font-medium ${change - usual >= 0 ? 'bg-income/10 text-income' : 'bg-expense/10 text-expense'}`}>
-                            {change - usual >= 0 ? '+' : '−'}{money(Math.abs(change - usual))} {change - usual >= 0 ? 'über' : 'unter'} Ø ({money(usual)})
-                        </span>
+                        <div className={`rounded-2xl px-3 py-2 ${change - usual >= 0 ? 'bg-income/10 text-income' : 'bg-expense/10 text-expense'}`}>
+                            <p className="tabular truncate text-[11px] opacity-80">{change - usual >= 0 ? 'über' : 'unter'} Ø {money(usual)}</p>
+                            <p className="tabular truncate text-sm font-semibold">{change - usual >= 0 ? '+' : '−'}{money(Math.abs(change - usual))}</p>
+                        </div>
                     )}
                 </div>
                 <div className="grid grid-cols-2 gap-4">
