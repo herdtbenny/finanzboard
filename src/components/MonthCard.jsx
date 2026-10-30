@@ -1,7 +1,10 @@
-import { ArrowDownRight, ArrowUpRight } from 'lucide-react';
+import { useState } from 'react';
+import { ArrowDownRight, ArrowUpRight, ChevronDown } from 'lucide-react';
 import { CategoryIcon } from '../shared/categoryIcons.jsx';
 import { money, monthLabel, shiftMonth } from '../shared/format.js';
 import { balanceChange, hasMonth, monthSummary, usualSaved } from '../shared/insights.js';
+import { isNeutral, isRefund } from '../shared/categories.js';
+import { monthKey } from '../shared/format.js';
 import { Bar, Card, MonthSwitch } from './ui.jsx';
 
 // The chosen month in one card: what was saved (with the savings rate as a
@@ -16,6 +19,19 @@ export default function MonthCard({ transactions, month, onMonth, onAll }) {
     const valueChange = balanceChange(transactions, month) - summary.net;
     const top = Object.entries(summary.byCategory).sort((a, b) => b[1] - a[1]).slice(0, 3);
     const scale = Math.max(summary.in, summary.out, 1);
+    const [explain, setExplain] = useState(false);
+
+    // How many bookings stand behind income and expenses.
+    let nIn = 0;
+    let nOut = 0;
+    for (const t of transactions) {
+        if (monthKey(t.booking_date) !== month || isNeutral(t)) continue;
+        if (t.amount > 0 && !isRefund(t)) nIn++;
+        else nOut++;
+    }
+    const prevName = monthLabel(prevKey, { month: 'long' });
+    const avgFrom = monthLabel(shiftMonth(month, -6), { month: 'short' }).replace('.', '');
+    const avgTo = monthLabel(prevKey, { month: 'short' }).replace('.', '');
 
     return (
         <Card>
@@ -40,17 +56,21 @@ export default function MonthCard({ transactions, month, onMonth, onAll }) {
                 </div>
             </div>
 
+            <p className="mt-3 px-1 text-sm leading-snug text-muted">
+                <Sentence summary={summary} prev={prev} prevName={prevName} usual={usual} />
+            </p>
+
             {/* Income against expenses */}
             <div className="mt-4 space-y-2.5">
-                <Flow label="Einnahmen" value={summary.in} share={summary.in / scale} tone="bg-income" />
-                <Flow label="Ausgaben" value={summary.out} share={summary.out / scale} tone="bg-expense" />
+                <Flow label="Einnahmen" count={nIn} value={summary.in} share={summary.in / scale} tone="bg-income" />
+                <Flow label="Ausgaben" count={nOut} value={summary.out} share={summary.out / scale} tone="bg-expense" />
             </div>
 
             {/* Compared with last month and the usual month */}
             {(prev != null || usual != null) && (
                 <div className="mt-4 grid grid-cols-2 gap-2">
-                    {prev != null && <Compare label={`Vormonat · ${monthLabel(prevKey, { month: 'short' })}`} base={prev} value={summary.net} />}
-                    {usual != null && <Compare label="Ø 6 Monate" base={usual} value={summary.net} />}
+                    {prev != null && <Compare label={`vs. ${prevName}`} note={`${avgTo}: ${money(prev)}`} base={prev} value={summary.net} />}
+                    {usual != null && <Compare label="vs. Ø 6 Monate" note={`Ø ${avgFrom}–${avgTo}: ${money(usual)}`} base={usual} value={summary.net} />}
                 </div>
             )}
 
@@ -67,7 +87,10 @@ export default function MonthCard({ transactions, month, onMonth, onAll }) {
                                 <div className="min-w-0 flex-1">
                                     <div className="mb-1 flex justify-between gap-2 text-sm">
                                         <span className="truncate">{cat}</span>
-                                        <span className="tabular font-medium">{money(sum)}</span>
+                                        <span className="tabular shrink-0 font-medium">
+                                            <span className="mr-1.5 text-xs font-normal text-muted">{Math.round((sum / summary.out) * 100)} %</span>
+                                            {money(sum)}
+                                        </span>
                                     </div>
                                     <Bar value={summary.out ? sum / summary.out : 0} tone="bg-expense" />
                                 </div>
@@ -76,8 +99,42 @@ export default function MonthCard({ transactions, month, onMonth, onAll }) {
                     </ul>
                 </div>
             )}
+
+            <button onClick={() => setExplain(!explain)} className="mt-4 flex items-center gap-1 rounded-full text-xs text-muted">
+                So wird gerechnet <ChevronDown size={13} className={explain ? 'rotate-180' : ''} />
+            </button>
+            {explain && (
+                <ul className="mt-2 list-disc space-y-1 pl-4 text-xs leading-snug text-muted">
+                    <li><b className="font-medium text-ink">Gespart</b> = Einnahmen − Ausgaben. Investiertes Geld gilt als gespart.</li>
+                    <li><b className="font-medium text-ink">behalten</b> (Ring) = welcher Anteil deiner Einnahmen übrig blieb, die Sparquote.</li>
+                    <li><b className="font-medium text-ink">Ausgaben</b> nach Abzug von Erstattungen (z. B. Anteile von Freunden, Rückzahlungen).</li>
+                    <li>Umbuchungen zwischen deinen Konten, Investieren, Kontostand-Korrekturen und Depot-Kursänderungen zählen weder als Einnahme noch als Ausgabe.</li>
+                    <li>Die Vergleiche zeigen, wie viel mehr oder weniger du gespart hast als im Vormonat bzw. im Schnitt der 6 Monate davor.</li>
+                </ul>
+            )}
         </Card>
     );
+}
+
+// One plain sentence about the month.
+function Sentence({ summary, prev, prevName, usual }) {
+    if (!summary.in && !summary.out) return 'In diesem Monat gibt es noch keine Buchungen.';
+    const parts = [];
+    if (summary.net >= 0) {
+        parts.push(summary.rate != null
+            ? `Du hast ${Math.round(summary.rate * 100)} % deiner Einnahmen behalten`
+            : 'Du hast mehr eingenommen als ausgegeben');
+    } else {
+        parts.push(`Du hast ${money(-summary.net)} mehr ausgegeben als eingenommen`);
+    }
+    const vs = [];
+    if (prev != null) vs.push(`${money(Math.abs(summary.net - prev))} ${summary.net >= prev ? 'mehr' : 'weniger'} als im ${prevName}`);
+    if (usual != null) vs.push(`${money(Math.abs(summary.net - usual))} ${summary.net >= usual ? 'mehr' : 'weniger'} als im Schnitt`);
+    if (vs.length === 2) {
+        const sameDirection = (summary.net >= prev) === (summary.net >= usual);
+        return `${parts[0]} – ${vs[0]}, ${sameDirection ? 'und' : 'aber'} ${vs[1]}.`;
+    }
+    return `${parts[0]}${vs.length ? ` – ${vs[0]}` : ''}.`;
 }
 
 // Savings rate as a ring; empty when nothing was saved.
@@ -97,17 +154,17 @@ function Ring({ rate, negative }) {
             </svg>
             <span className="tabular absolute inset-0 flex flex-col items-center justify-center leading-none">
                 <span className="text-sm font-semibold">{rate == null ? '–' : `${Math.round(rate * 100)} %`}</span>
-                <span className="mt-0.5 text-[9px] text-muted">Quote</span>
+                <span className="mt-0.5 text-[9px] text-muted">behalten</span>
             </span>
         </div>
     );
 }
 
-function Flow({ label, value, share, tone }) {
+function Flow({ label, count, value, share, tone }) {
     return (
         <div>
             <div className="mb-1 flex justify-between text-sm">
-                <span className="text-muted">{label}</span>
+                <span className="text-muted">{label} <span className="text-xs">· {count} {count === 1 ? 'Buchung' : 'Buchungen'}</span></span>
                 <span className="tabular font-semibold">{money(value)}</span>
             </div>
             <div className="h-2 rounded-full bg-ink/[0.07]">
@@ -118,7 +175,7 @@ function Flow({ label, value, share, tone }) {
 }
 
 // How much more or less was saved than in `base`.
-function Compare({ label, base, value }) {
+function Compare({ label, note, base, value }) {
     const diff = value - base;
     const up = diff >= 0;
     return (
@@ -128,7 +185,7 @@ function Compare({ label, base, value }) {
                 {up ? <ArrowUpRight size={14} className="shrink-0" /> : <ArrowDownRight size={14} className="shrink-0" />}
                 {up ? '+' : '−'}{money(Math.abs(diff))}
             </p>
-            <p className="tabular truncate text-[11px] text-muted">gespart {money(base)}</p>
+            <p className="tabular truncate text-[11px] text-muted">{note}</p>
         </div>
     );
 }
