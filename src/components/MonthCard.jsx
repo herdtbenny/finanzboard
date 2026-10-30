@@ -1,5 +1,4 @@
-import { useState } from 'react';
-import { ArrowDownRight, ArrowUpRight, ChevronDown } from 'lucide-react';
+import { ArrowDownRight, ArrowUpRight } from 'lucide-react';
 import { CategoryIcon } from '../shared/categoryIcons.jsx';
 import { money, monthLabel, shiftMonth } from '../shared/format.js';
 import { balanceChange, hasMonth, monthSummary, usualSaved } from '../shared/insights.js';
@@ -19,7 +18,6 @@ export default function MonthCard({ transactions, month, onMonth, onAll }) {
     const valueChange = balanceChange(transactions, month) - summary.net;
     const top = Object.entries(summary.byCategory).sort((a, b) => b[1] - a[1]).slice(0, 3);
     const scale = Math.max(summary.in, summary.out, 1);
-    const [explain, setExplain] = useState(false);
 
     // How many bookings stand behind income and expenses.
     let nIn = 0;
@@ -45,13 +43,13 @@ export default function MonthCard({ transactions, month, onMonth, onAll }) {
                 <Flow label="Einnahmen" count={nIn} value={summary.in} share={summary.in / scale} tone="bg-income" />
                 <Flow label="Ausgaben" count={nOut} value={summary.out} share={summary.out / scale} tone="bg-expense" />
             </div>
-            <div className="mt-3 flex items-baseline justify-between gap-3 rounded-2xl bg-ink/[0.04] px-4 py-2.5">
-                <span className="text-sm text-muted">Gespart</span>
-                <span className="tabular truncate text-right">
-                    <span className={`text-lg font-semibold ${summary.net < 0 ? 'text-expense' : 'text-income'}`}>
-                        {summary.net >= 0 ? '+' : ''}{money(summary.net)}
-                    </span>
-                    {summary.rate != null && summary.net >= 0 && <span className="ml-1.5 text-sm text-muted">· {Math.round(summary.rate * 100)} %</span>}
+            <div className="mt-3 flex items-center justify-between gap-3 rounded-2xl bg-ink/[0.04] px-4 py-2.5">
+                <div>
+                    <p className="text-sm text-muted">Gespart</p>
+                    {summary.rate != null && summary.net >= 0 && <p className="text-xs text-muted">{Math.round(summary.rate * 100)} % der Einnahmen</p>}
+                </div>
+                <span className={`tabular text-lg font-semibold ${summary.net < 0 ? 'text-expense' : 'text-income'}`}>
+                    {summary.net >= 0 ? '+' : ''}{money(summary.net)}
                 </span>
             </div>
             {Math.abs(valueChange) > 0.005 && (
@@ -60,15 +58,11 @@ export default function MonthCard({ transactions, month, onMonth, onAll }) {
                 </p>
             )}
 
-            <p className="mt-3 px-1 text-sm leading-snug text-muted">
-                <Sentence summary={summary} prev={prev} prevName={prevName} usual={usual} />
-            </p>
-
             {/* Compared with last month and the usual month */}
             {(prev != null || usual != null) && (
-                <div className="mt-4 grid grid-cols-2 gap-2">
-                    {prev != null && <Compare label={`vs. ${prevName}`} note={`${avgTo}: ${money(prev)}`} base={prev} value={summary.net} />}
-                    {usual != null && <Compare label="vs. Ø 6 Monate" note={`Ø ${avgFrom}–${avgTo}: ${money(usual)}`} base={usual} value={summary.net} />}
+                <div className="mt-3 space-y-1.5">
+                    {prev != null && <Compare label={`als im ${prevName}`} base={prev} value={summary.net} />}
+                    {usual != null && <Compare label={`als im Schnitt ${avgFrom}–${avgTo}`} base={usual} value={summary.net} />}
                 </div>
             )}
 
@@ -98,41 +92,8 @@ export default function MonthCard({ transactions, month, onMonth, onAll }) {
                 </div>
             )}
 
-            <button onClick={() => setExplain(!explain)} className="mt-4 flex items-center gap-1 rounded-full text-xs text-muted">
-                So wird gerechnet <ChevronDown size={13} className={explain ? 'rotate-180' : ''} />
-            </button>
-            {explain && (
-                <ul className="mt-2 list-disc space-y-1 pl-4 text-xs leading-snug text-muted">
-                    <li><b className="font-medium text-ink">Gespart</b> = Einnahmen − Ausgaben. Investiertes Geld gilt als gespart.</li>
-                    <li><b className="font-medium text-ink">%</b> hinter Gespart = welcher Anteil deiner Einnahmen übrig blieb, die Sparquote.</li>
-                    <li><b className="font-medium text-ink">Ausgaben</b> nach Abzug von Erstattungen (z. B. Anteile von Freunden, Rückzahlungen).</li>
-                    <li>Umbuchungen zwischen deinen Konten, Investieren, Kontostand-Korrekturen und Depot-Kursänderungen zählen weder als Einnahme noch als Ausgabe.</li>
-                    <li>Die Vergleiche zeigen, wie viel mehr oder weniger du gespart hast als im Vormonat bzw. im Schnitt der 6 Monate davor.</li>
-                </ul>
-            )}
         </Card>
     );
-}
-
-// One plain sentence about the month.
-function Sentence({ summary, prev, prevName, usual }) {
-    if (!summary.in && !summary.out) return 'In diesem Monat gibt es noch keine Buchungen.';
-    const parts = [];
-    if (summary.net >= 0) {
-        parts.push(summary.rate != null
-            ? `Du hast ${Math.round(summary.rate * 100)} % deiner Einnahmen behalten`
-            : 'Du hast mehr eingenommen als ausgegeben');
-    } else {
-        parts.push(`Du hast ${money(-summary.net)} mehr ausgegeben als eingenommen`);
-    }
-    const vs = [];
-    if (prev != null) vs.push(`${money(Math.abs(summary.net - prev))} ${summary.net >= prev ? 'mehr' : 'weniger'} als im ${prevName}`);
-    if (usual != null) vs.push(`${money(Math.abs(summary.net - usual))} ${summary.net >= usual ? 'mehr' : 'weniger'} als im Schnitt`);
-    if (vs.length === 2) {
-        const sameDirection = (summary.net >= prev) === (summary.net >= usual);
-        return `${parts[0]} – ${vs[0]}, ${sameDirection ? 'und' : 'aber'} ${vs[1]}.`;
-    }
-    return `${parts[0]}${vs.length ? ` – ${vs[0]}` : ''}.`;
 }
 
 function Flow({ label, count, value, share, tone }) {
@@ -149,18 +110,19 @@ function Flow({ label, count, value, share, tone }) {
     );
 }
 
-// How much more or less was saved than in `base`.
-function Compare({ label, note, base, value }) {
+// One line: "↘ 462,49 € weniger gespart als im September (1.138,99 €)".
+function Compare({ label, base, value }) {
     const diff = value - base;
     const up = diff >= 0;
     return (
-        <div className={`rounded-2xl px-3 py-2.5 ${up ? 'bg-income/10' : 'bg-expense/10'}`}>
-            <p className="truncate text-[11px] text-muted">{label}</p>
-            <p className={`tabular flex items-center gap-1 truncate text-sm font-semibold ${up ? 'text-income' : 'text-expense'}`}>
-                {up ? <ArrowUpRight size={14} className="shrink-0" /> : <ArrowDownRight size={14} className="shrink-0" />}
-                {up ? '+' : '−'}{money(Math.abs(diff))}
-            </p>
-            <p className="tabular truncate text-[11px] text-muted">{note}</p>
-        </div>
+        <p className="flex items-start gap-1.5 px-1 text-sm leading-snug">
+            {up
+                ? <ArrowUpRight size={15} className="mt-0.5 shrink-0 text-income" />
+                : <ArrowDownRight size={15} className="mt-0.5 shrink-0 text-expense" />}
+            <span>
+                <span className={`tabular font-semibold ${up ? 'text-income' : 'text-expense'}`}>{money(Math.abs(diff))} {up ? 'mehr' : 'weniger'}</span>
+                <span className="text-muted"> gespart {label} <span className="tabular">({money(base)})</span></span>
+            </span>
+        </p>
     );
 }
