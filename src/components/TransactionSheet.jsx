@@ -4,7 +4,7 @@ import { categorize, FALLBACK, NEUTRAL_CATEGORIES } from '../shared/categories.j
 import { amountInput, newId, parseAmount, todayIso } from '../shared/format.js';
 import { REPEATS } from '../shared/repeat.js';
 import Sheet, { Field, inputClass } from './Sheet.jsx';
-import ReceiptScanner from './ReceiptScanner.jsx';
+import { useReceiptScanner } from './ReceiptScanner.jsx';
 import CategoryPicker from './CategoryPicker.jsx';
 
 const KINDS = [['out', 'Ausgabe', 'bg-expense text-white'], ['in', 'Einnahme', 'bg-income text-white'], ['transfer', 'Umbuchung', 'bg-ink text-paper']];
@@ -65,6 +65,9 @@ export default function TransactionSheet({
         if (r.date) setDate(r.date);
         setCategory(null);
     }
+
+    const scanner = useReceiptScanner({ known: counterparties, onResult: applyReceipt });
+    const canScan = !editing && !isRecurring;
 
     async function run(fn) {
         setBusy(true);
@@ -135,9 +138,9 @@ export default function TransactionSheet({
     );
 
     return (
-        <Sheet title={title} onClose={onClose}>
+        <Sheet title={title} action={canScan ? scanner.button : null} onClose={onClose}>
             <form onSubmit={save} className="space-y-4 pb-4">
-                {!editing && !isRecurring && <ReceiptScanner known={counterparties} onResult={applyReceipt} />}
+                {canScan && scanner.status}
 
                 <div className="grid grid-cols-3 rounded-full border border-line bg-card p-1">
                     {KINDS.map(([k, label, active]) => (
@@ -203,7 +206,7 @@ export default function TransactionSheet({
 
                 <div className={`grid gap-3 ${!transfer && accounts.length > 1 ? 'grid-cols-2' : ''}`}>
                     <Field label={isRecurring || repeat ? 'Erste Ausführung' : 'Datum'}>
-                        <input type="date" value={date} onChange={(e) => setDate(e.target.value)} className={`${inputClass} min-h-12`} />
+                        <input type="date" value={date} onChange={(e) => setDate(e.target.value)} className={inputClass} />
                     </Field>
                     {!transfer && accounts.length > 1 && <Field label="Konto">{accountSelect(accountId, setAccountId)}</Field>}
                 </div>
@@ -218,7 +221,7 @@ export default function TransactionSheet({
                         </Field>
                         {repeat && (
                             <Field label="Ende (optional)">
-                                <input type="date" value={endDate} min={date} onChange={(e) => setEndDate(e.target.value)} className={`${inputClass} min-h-12`} />
+                                <input type="date" value={endDate} min={date} onChange={(e) => setEndDate(e.target.value)} className={inputClass} />
                             </Field>
                         )}
                     </div>

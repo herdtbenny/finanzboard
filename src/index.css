@@ -47,3 +47,16 @@ body {
 .fade-in { animation: fade-in 0.2s ease-out both; }
 @media (prefers-reduced-motion: reduce) { .rise, .sheet-in, .fade-in { animation: none; } }
 .pb-tabbar { padding-bottom: calc(6.5rem + env(safe-area-inset-bottom)); }
+
+/* iOS Safari draws date inputs taller than other fields, centres the value
+   and ignores the width; make them match the text inputs. */
+input[type="date"] {
+  -webkit-appearance: none;
+  appearance: none;
+  min-width: 0;
+  max-width: 100%;
+  height: 3.125rem;
+  line-height: 1.5rem;
+}
+input[type="date"]::-webkit-date-and-time-value { text-align: left; margin: 0; }
+input[type="date"]::-webkit-datetime-edit { padding: 0; }

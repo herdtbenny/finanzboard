@@ -1,29 +1,14 @@
 const KEY = 'finanzboard-token';
-const LOCK = 'finanzboard-faceid';
 const SPACE = 'finanzboard-space';
 
-// Without the Face ID lock the token stays in localStorage, so the phone stays
-// logged in. With it, the token only lives in sessionStorage: closing the app
-// locks it, and opening asks for Face ID again.
-export function lockEnabled() {
-    try { return localStorage.getItem(LOCK) === '1'; } catch { return false; }
-}
-
+// The session token stays in localStorage, so the phone stays logged in
+// until the token expires (180 days, see api/_lib.js) or you log out.
 export function loadToken() {
-    try { return (lockEnabled() ? sessionStorage : localStorage).getItem(KEY) || ''; } catch { return ''; }
+    try { return localStorage.getItem(KEY) || ''; } catch { return ''; }
 }
 
 export function saveToken(token) {
-    try {
-        localStorage.removeItem(KEY);
-        sessionStorage.removeItem(KEY);
-        if (token) (lockEnabled() ? sessionStorage : localStorage).setItem(KEY, token);
-    } catch { /* private mode */ }
-}
-
-export function setLock(on, token) {
-    try { on ? localStorage.setItem(LOCK, '1') : localStorage.removeItem(LOCK); } catch { /* private mode */ }
-    saveToken(token);
+    try { token ? localStorage.setItem(KEY, token) : localStorage.removeItem(KEY); } catch { /* private mode */ }
 }
 
 // The Haushalt last opened on this device.
@@ -49,7 +34,7 @@ export async function api(path, token, { method = 'GET', body, space } = {}) {
         body: body ? JSON.stringify(body) : undefined,
     });
     const data = await res.json().catch(() => ({}));
-    if (res.status === 401 && !path.startsWith('login') && !path.startsWith('passkey')) throw new Unauthorized();
+    if (res.status === 401 && !path.startsWith('login')) throw new Unauthorized();
     if (!res.ok) throw new Error(data.error || `Fehler ${res.status}`);
     return data;
 }

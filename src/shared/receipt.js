@@ -1,5 +1,5 @@
-// Reads amount, date and shop from the text of a German receipt — whether it
-// came from the in-browser OCR or from the iPhone's "Text scannen". Plain
+// Reads amount, date and shop from the text of a German receipt, as the
+// in-browser OCR (src/shared/ocr.js) recognised it. Plain
 // rules, no AI: good at totals and dates, best effort for the shop name.
 
 // Lines that name the total, strongest first.

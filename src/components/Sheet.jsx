@@ -4,7 +4,7 @@ import { X } from 'lucide-react';
 
 // Bottom sheet on phones, centred card on wide screens. Rendered into <body>
 // so an animated (transformed) page around it can't trap it under the tab bar.
-export default function Sheet({ title, onClose, children }) {
+export default function Sheet({ title, action, onClose, children }) {
     useEffect(() => {
         const onKey = (e) => e.key === 'Escape' && onClose();
         document.addEventListener('keydown', onKey);
@@ -24,9 +24,12 @@ export default function Sheet({ title, onClose, children }) {
                 <div className="mx-auto mb-3 h-1 w-10 rounded-full bg-line sm:hidden" />
                 <div className="mb-4 flex items-center justify-between">
                     <h2 className="text-lg font-semibold">{title}</h2>
-                    <button onClick={onClose} aria-label="Schließen" className="flex size-9 items-center justify-center rounded-full border border-line bg-card">
-                        <X size={16} />
-                    </button>
+                    <div className="flex items-center gap-2">
+                        {action}
+                        <button onClick={onClose} aria-label="Schließen" className="flex size-9 items-center justify-center rounded-full border border-line bg-card">
+                            <X size={16} />
+                        </button>
+                    </div>
                 </div>
                 {children}
             </div>

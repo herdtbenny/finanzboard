@@ -5,7 +5,7 @@ ohne Bankverbindung. Daten liegen in **Supabase**, die App läuft auf **Vercel**
 auf dem Handy als App installierbar („Zum Home-Bildschirm“).
 
 ## Personen und Haushalte
-- Jede Person meldet sich mit **Name + Passwort** an (oder Face ID). Personen liegen in der
+- Jede Person meldet sich mit **Name + Passwort** an und bleibt auf dem Gerät 180 Tage angemeldet. Personen liegen in der
   Datenbank, Passwörter gehasht (scrypt).
 - Daten (Konten, Umsätze, Daueraufträge) gehören zu einem **Haushalt**. Eine Person kann in
   mehreren Haushalten sein, mehrere Personen können sich einen teilen – z. B. „Mama“, „Papa“
@@ -21,12 +21,11 @@ auf dem Handy als App installierbar („Zum Home-Bildschirm“).
   (heute vorausgefüllt), Konto, Notiz. Die Kategorie wird beim Tippen anhand von Stichwörtern
   vorgeschlagen (`REWE` → Lebensmittel); ein Tipp auf eine andere überschreibt das.
   Schon benutzte Namen werden zur Auswahl angeboten.
-- **Kassenzettel** (im „+“-Formular): „Kassenzettel“ fotografiert und liest den Zettel per
-  Texterkennung im Browser (Tesseract.js, `src/shared/ocr.js`); „Text scannen“ ist ein Textfeld
-  für die iPhone-Funktion „Text scannen“ oder eingefügten Text. Beides wertet
-  `src/shared/receipt.js` aus (Betrag, Datum, Händler) und füllt nur das Formular vor. Das Foto
-  verlässt das Gerät nicht; Texterkennung und deutsche Sprachdaten (~10 MB) lädt der Browser
-  beim ersten Scan von cdn.jsdelivr.net und hält sie im Cache.
+- **Kassenzettel** (Knopf oben im „+“-Formular): fotografiert den Zettel und liest ihn per
+  Texterkennung im Browser (Tesseract.js, `src/shared/ocr.js`); `src/shared/receipt.js` holt
+  Betrag, Datum und Händler heraus und füllt nur das Formular vor. Das Foto verlässt das Gerät
+  nicht; Texterkennung und deutsche Sprachdaten (~10 MB) lädt der Browser beim ersten Scan von
+  cdn.jsdelivr.net und hält sie im Cache.
 - **Umsatz antippen**: bearbeiten oder löschen (zweimal tippen zum Bestätigen).
 - **Kategorie im Diagramm antippen**: filtert die Umsatzliste.
 - **Umbuchung** (dritter Reiter im Formular): von Konto → nach Konto. Wird als zwei Buchungen
@@ -36,23 +35,7 @@ auf dem Handy als App installierbar („Zum Home-Bildschirm“).
   Buchungen entstehen beim Öffnen der App und täglich per Cron (`api/_recurring.js`).
 - **Umsätze nach Konto filtern**: Auswahl „Alle Konten“ in Umsätze, oder ein Konto in der
   Übersicht antippen. Dann zeigt die Liste den Kontoauszug mit Kontostand.
-- **Face ID**: Konten → Face ID → Einrichten (WebAuthn-Passkey, `api/passkey.js`). Danach ist die
-  App beim Öffnen gesperrt. Ein Passkey gilt nur für die Domain, auf der er eingerichtet wurde
-  (localhost ≠ Vercel-Domain); auf dem iPhone braucht es die HTTPS-Domain.
-
-## Einrichtung
-1. **Supabase**: Projekt anlegen → SQL Editor → `supabase/schema.sql` ausführen, danach die
-   nummerierten Migrationen (`supabase/002-…`) der Reihe nach. Achtung: `schema.sql` löscht alle Tabellen.
-2. **Lokal**: `cp .env.example .env.local`, ausfüllen, `npm install`, `npm run dev`
-   (Frontend + API auf http://localhost:5173, die `api/`-Funktionen laufen im Vite-Server).
-   Danach einmalig den ersten Admin anlegen: `node scripts/setup-admin.js <Name> <Passwort>`.
-3. **Vercel**: Repo importieren, die Variablen aus `.env.example` setzen, deployen.
-   Der Cron in `vercel.json` (`/api/keep-alive`, täglich) hält das kostenlose
-   Supabase-Projekt aktiv, das sonst nach 7 Tagen ohne Zugriff pausiert.
-4. Handy: iPhone → Teilen → „Zum Home-Bildschirm“, Android → Menü → „App installieren“.
-
-## Aufbau
 - `api/_lib.js`: Login-Prüfung, Supabase-Client
-- `api/data.js`: alle Konten, Umsätze, Daueraufträge (bucht Fälliges vorher) · `api/transactions.js` / `api/accounts.js` / `api/recurrings.js`: speichern (POST) und löschen (DELETE) · `api/passkey.js`: Face ID
+- `api/data.js`: alle Konten, Umsätze, Daueraufträge (bucht Fälliges vorher) · `api/transactions.js` / `api/accounts.js` / `api/recurrings.js`: speichern (POST) und löschen (DELETE)
 - `src/components/Dashboard.jsx`: Übersicht, Salden, Monat · `TransactionSheet.jsx`: Eingabeformular · `AccountsSheet.jsx`: Konten
 - `src/shared/categories.js`: Kategorien und Stichwort-Regeln für die Vorschläge

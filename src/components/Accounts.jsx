@@ -1,7 +1,5 @@
 import { useState } from 'react';
-import { Download, LogOut, RefreshCw, ScanFace, Trash2 } from 'lucide-react';
-import { lockEnabled, setLock } from '../api.js';
-import { faceIdError, faceIdSupported, registerFaceId } from '../passkey.js';
+import { Download, LogOut, RefreshCw, Trash2 } from 'lucide-react';
 import { amountInput, money, newId, parseAmount, todayIso } from '../shared/format.js';
 import { exportCsv } from '../shared/exportCsv.js';
 import Sheet, { Field, inputClass } from './Sheet.jsx';
@@ -51,7 +49,6 @@ export default function Accounts({ token, me, onMeChanged, accounts, balances, t
 
             <Card className="p-2">
                 <Profile token={token} me={me} />
-                <FaceId token={token} />
                 <button onClick={() => exportCsv(transactions, accounts)} className="flex w-full items-center gap-2.5 rounded-full px-3 py-2 text-left text-sm font-medium active:bg-ink/5">
                     <Download size={17} /> Umsätze als CSV exportieren
                 </button>
@@ -74,52 +71,6 @@ export default function Accounts({ token, me, onMeChanged, accounts, balances, t
                 />
             )}
         </div>
-    );
-}
-
-// Face ID / Touch ID: sets up a passkey for this device and turns on the
-// lock, so opening the app asks for Face ID instead of staying logged in.
-function FaceId({ token }) {
-    const [on, setOn] = useState(lockEnabled);
-    const [busy, setBusy] = useState(false);
-    const [message, setMessage] = useState('');
-    if (!faceIdSupported()) return null;
-
-    async function enable() {
-        setBusy(true);
-        setMessage('');
-        try {
-            await registerFaceId(token);
-            setLock(true, token);
-            setOn(true);
-            setMessage('Eingerichtet. Beim nächsten Öffnen entsperrst du mit Face ID.');
-        } catch (e) {
-            setMessage(faceIdError(e));
-        }
-        setBusy(false);
-    }
-
-    function disable() {
-        setLock(false, token);
-        setOn(false);
-        setMessage('');
-    }
-
-    return (
-        <>
-            <div className="flex items-center gap-2.5 px-3 py-1.5 text-sm">
-                <ScanFace size={17} className="shrink-0" />
-                <span className="flex-1 font-medium">Face ID <span className="text-xs font-normal text-muted">· {on ? 'beim Öffnen gesperrt' : 'aus'}</span></span>
-                {on ? (
-                    <button onClick={disable} className="rounded-full border border-line px-3 py-1 text-xs font-medium">Aus</button>
-                ) : (
-                    <button onClick={enable} disabled={busy} className="rounded-full bg-ink px-3 py-1 text-xs font-medium text-paper disabled:opacity-40">
-                        {busy ? '…' : 'Einrichten'}
-                    </button>
-                )}
-            </div>
-            {message && <p className="px-3 pb-1 text-xs text-muted">{message}</p>}
-        </>
     );
 }
 
@@ -254,7 +205,7 @@ function DepotValueSheet({ account, balance, onSave, onClose }) {
                     <input autoFocus inputMode="decimal" value={value} onChange={(e) => setValue(e.target.value.replace(/[^\d.,]/g, ''))} className={`${inputClass} tabular text-lg font-semibold`} />
                 </Field>
                 <Field label="Stand vom">
-                    <input type="date" value={date} onChange={(e) => setDate(e.target.value)} className={`${inputClass} min-h-12`} />
+                    <input type="date" value={date} onChange={(e) => setDate(e.target.value)} className={inputClass} />
                 </Field>
                 {Number.isFinite(target) && diff !== 0 && (
                     <p className={`px-1 text-sm ${diff > 0 ? 'text-income' : 'text-expense'}`}>
