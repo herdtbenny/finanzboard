@@ -66,3 +66,23 @@ export function balanceSeries(accounts, transactions, n = 12) {
         return { key, value: running };
     });
 }
+
+// How much the total of all accounts changed in a month: every booking
+// counts, also depot value changes and corrections (transfers cancel out).
+export function balanceChange(transactions, key) {
+    let sum = 0;
+    for (const t of transactions) if (monthKey(t.booking_date) === key) sum += t.amount;
+    return sum;
+}
+
+// The usual change: average of the `n` months before `key` that have data.
+export function usualChange(transactions, key, n = 6) {
+    const firstKey = transactions.length ? monthKey(transactions[transactions.length - 1].booking_date) : key;
+    const changes = [];
+    for (let i = 1; i <= n; i++) {
+        const k = shiftMonth(key, -i);
+        if (k < firstKey) break;
+        changes.push(balanceChange(transactions, k));
+    }
+    return changes.length ? changes.reduce((s, c) => s + c, 0) / changes.length : null;
+}

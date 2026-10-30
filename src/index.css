@@ -8,9 +8,6 @@
   --color-line: #e7e6e2;
   --color-income: #0f8a74;
   --color-expense: #c2410c;
-  /* Up/down on the hero card, which is dark in light mode and light in dark mode. */
-  --color-hero-up: #5fd3b0;
-  --color-hero-down: #ff9474;
   --font-sans: "Geist Variable", ui-sans-serif, system-ui, -apple-system, sans-serif;
 }
 
@@ -24,8 +21,6 @@
     --color-line: #2c2c2a;
     --color-income: #2a9d88;
     --color-expense: #e0673a;
-    --color-hero-up: #0f7a66;
-    --color-hero-down: #b8410f;
   }
 }
 

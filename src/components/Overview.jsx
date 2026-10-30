@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { ArrowDownRight, ArrowUpRight } from 'lucide-react';
 import { CategoryIcon } from '../shared/categoryIcons.jsx';
 import { money, monthLabel } from '../shared/format.js';
-import { monthSummary } from '../shared/insights.js';
+import { balanceChange, monthSummary, usualChange } from '../shared/insights.js';
 import BalanceChart from './BalanceChart.jsx';
 import { accountNames, TransactionRow } from './Transactions.jsx';
 import { mergeTransfers } from '../shared/transfers.js';
@@ -11,11 +11,9 @@ import { Bar, Card, CardHeader, MonthSwitch } from './ui.jsx';
 export default function Overview({ accounts, balances, series, transactions, month, onMonth, onOpen, onAccount, goTo }) {
     const [point, setPoint] = useState(null);
     const total = series[series.length - 1].value;
-    const change = total - series[series.length - 2].value;
-    // How much the total usually changes in a month: the six full months
-    // before this one.
-    const deltas = series.slice(-8).map((p, i, arr) => (i ? p.value - arr[i - 1].value : null)).slice(1, -1);
-    const usual = deltas.length ? deltas.reduce((s, d) => s + d, 0) / deltas.length : null;
+    // Change of the total in the chosen month, against the six months before.
+    const change = balanceChange(transactions, month);
+    const usual = usualChange(transactions, month);
 
     const summary = monthSummary(transactions, month);
     const top = Object.entries(summary.byCategory).sort((a, b) => b[1] - a[1]).slice(0, 3);
@@ -28,22 +26,7 @@ export default function Overview({ accounts, balances, series, transactions, mon
             <section className="rounded-[28px] bg-ink px-5 pt-4 pb-4 text-paper">
                 <p className="text-xs opacity-60">{point ? `Ende ${monthLabel(point.key)}` : 'Gesamtvermögen'}</p>
                 <p className="tabular mt-1 text-[30px] leading-none font-semibold tracking-tight">{money(point ? point.value : total)}</p>
-                <div className="mt-2 flex min-h-6 flex-wrap items-center gap-1.5">
-                    {!point && (
-                        <>
-                            <span className={`inline-flex items-center gap-1 rounded-full bg-paper/10 px-2.5 py-1 text-xs font-medium ${change >= 0 ? 'text-hero-up' : 'text-hero-down'}`}>
-                                {change >= 0 ? <ArrowUpRight size={14} /> : <ArrowDownRight size={14} />}
-                                {change >= 0 ? '+' : ''}{money(change)} diesen Monat
-                            </span>
-                            {usual != null && (
-                                <span className={`tabular inline-flex items-center rounded-full bg-paper/10 px-2.5 py-1 text-xs font-medium ${change - usual >= 0 ? 'text-hero-up' : 'text-hero-down'}`}>
-                                    {change - usual >= 0 ? '+' : '−'}{money(Math.abs(change - usual))} {change - usual >= 0 ? 'über' : 'unter'} Ø ({money(usual)})
-                                </span>
-                            )}
-                        </>
-                    )}
-                </div>
-                <div className="mt-2">
+                <div className="mt-3">
                     <BalanceChart series={series} onActive={setPoint} />
                 </div>
             </section>
@@ -72,6 +55,17 @@ export default function Overview({ accounts, balances, series, transactions, mon
                     <h2 className="text-[15px] font-semibold">Monat</h2>
                     <MonthSwitch month={month} onChange={onMonth} />
                 </div>
+                <div className="-mt-1 mb-5 flex flex-wrap gap-1.5">
+                    <span className={`tabular inline-flex items-center gap-1 rounded-full px-2.5 py-1 text-xs font-medium ${change >= 0 ? 'bg-income/10 text-income' : 'bg-expense/10 text-expense'}`}>
+                        {change >= 0 ? <ArrowUpRight size={14} /> : <ArrowDownRight size={14} />}
+                        Vermögen {change >= 0 ? '+' : ''}{money(change)}
+                    </span>
+                    {usual != null && (
+                        <span className={`tabular inline-flex items-center rounded-full px-2.5 py-1 text-xs font-medium ${change - usual >= 0 ? 'bg-income/10 text-income' : 'bg-expense/10 text-expense'}`}>
+                            {change - usual >= 0 ? '+' : '−'}{money(Math.abs(change - usual))} {change - usual >= 0 ? 'über' : 'unter'} Ø ({money(usual)})
+                        </span>
+                    )}
+                </div>
                 <div className="grid grid-cols-2 gap-4">
                     <Figure label="Einnahmen" value={summary.in} dot="bg-income" />
                     <Figure label="Ausgaben" value={summary.out} dot="bg-expense" />
@@ -83,12 +77,6 @@ export default function Overview({ accounts, balances, series, transactions, mon
                         {summary.rate != null && summary.net > 0 && <span className="ml-1.5 font-normal text-muted">· {Math.round(summary.rate * 100)} %</span>}
                     </span>
                 </div>
-                {summary.invested > 0 && (
-                    <div className="mt-2 flex items-center justify-between px-4 text-sm">
-                        <span className="text-muted">davon investiert</span>
-                        <span className="tabular font-semibold">{money(summary.invested)}</span>
-                    </div>
-                )}
                 {top.length > 0 && (
                     <div className="mt-5">
                         <div className="mb-3 flex items-center justify-between">
