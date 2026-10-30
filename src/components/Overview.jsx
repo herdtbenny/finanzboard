@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { ArrowDownRight, ArrowUpRight } from 'lucide-react';
 import { CategoryIcon } from '../shared/categoryIcons.jsx';
-import { money, moneyShort, monthLabel } from '../shared/format.js';
+import { money, monthLabel } from '../shared/format.js';
 import { monthSummary } from '../shared/insights.js';
 import BalanceChart from './BalanceChart.jsx';
 import { accountNames, TransactionRow } from './Transactions.jsx';
@@ -37,7 +37,7 @@ export default function Overview({ accounts, balances, series, transactions, mon
                             </span>
                             {usual != null && (
                                 <span className={`tabular inline-flex items-center rounded-full bg-paper/10 px-2.5 py-1 text-xs font-medium ${change - usual >= 0 ? 'text-hero-up' : 'text-hero-down'}`}>
-                                    {change - usual >= 0 ? '+' : '−'}{moneyShort(Math.abs(change - usual))} {change - usual >= 0 ? 'über' : 'unter'} Ø ({moneyShort(usual)})
+                                    {change - usual >= 0 ? '+' : '−'}{money(Math.abs(change - usual))} {change - usual >= 0 ? 'über' : 'unter'} Ø ({money(usual)})
                                 </span>
                             )}
                         </>
@@ -127,7 +127,7 @@ function Figure({ label, value, dot }) {
     return (
         <div>
             <p className="flex items-center gap-1.5 text-xs text-muted"><span className={`size-2 rounded-full ${dot}`} />{label}</p>
-            <p className="tabular mt-1 text-2xl font-semibold tracking-tight">{moneyShort(value)}</p>
+            <p className="tabular mt-1 text-xl font-semibold tracking-tight">{money(value)}</p>
         </div>
     );
 }

@@ -1,6 +1,6 @@
 import { CategoryIcon } from '../shared/categoryIcons.jsx';
 import { isNeutral } from '../shared/categories.js';
-import { money, moneyShort, monthKey } from '../shared/format.js';
+import { money, monthKey } from '../shared/format.js';
 import { averageBefore, monthSummary } from '../shared/insights.js';
 import MonthChart from './MonthChart.jsx';
 import Recurrings from './Recurrings.jsx';
@@ -45,7 +45,7 @@ export default function Analysis({ transactions, accounts, recurrings, month, on
                                             <span className="tabular">{Math.round(share * 100)} %</span>
                                             {avg && (
                                                 <span className={`tabular ${delta > 0.5 && usual ? 'text-expense' : ''}`}>
-                                                    {usual ? `${delta >= 0 ? '+' : '−'}${moneyShort(Math.abs(delta))} zum Ø` : 'neu diesen Monat'}
+                                                    {usual ? `${delta >= 0 ? '+' : '−'}${money(Math.abs(delta))} zum Ø` : 'neu diesen Monat'}
                                                 </span>
                                             )}
                                         </div>

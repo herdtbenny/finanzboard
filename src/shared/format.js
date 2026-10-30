@@ -1,8 +1,7 @@
-const eur = new Intl.NumberFormat('de-DE', { style: 'currency', currency: 'EUR' });
-const eurShort = new Intl.NumberFormat('de-DE', { style: 'currency', currency: 'EUR', maximumFractionDigits: 0 });
+// Always with cents — amounts are never rounded in the UI.
+const eur = new Intl.NumberFormat('de-DE', { style: 'currency', currency: 'EUR', minimumFractionDigits: 2, maximumFractionDigits: 2 });
 
 export const money = (n) => eur.format(n || 0);
-export const moneyShort = (n) => eurShort.format(n || 0);
 
 export const monthKey = (date) => String(date).slice(0, 7);
 
