@@ -187,7 +187,6 @@ export default function TransactionSheet({
 
                         <Field label="Kategorie">
                             <CategoryPicker
-                                key={kind}
                                 options={optionsFor(kind).filter((c) => !NEUTRAL_CATEGORIES.includes(c))}
                                 value={shownCategory}
                                 picked={Boolean(category)}

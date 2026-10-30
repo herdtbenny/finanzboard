@@ -2,7 +2,7 @@ import { useMemo, useState } from 'react';
 import { ArrowLeftRight, ChevronDown, Repeat, Search, TrendingUp, X } from 'lucide-react';
 import { CategoryIcon } from '../shared/categoryIcons.jsx';
 import { dayLabel, money, monthKey } from '../shared/format.js';
-import { isNeutral } from '../shared/categories.js';
+import { isNeutral, isRefund } from '../shared/categories.js';
 import { mergeTransfers, transferTitle } from '../shared/transfers.js';
 import { MonthSwitch, PageTitle } from './ui.jsx';
 
@@ -78,7 +78,13 @@ export default function Transactions({ transactions, accounts, balances, month, 
     }, [transactions, account]);
     const list = useMemo(() => {
         // Transfers and corrections are neither; they only show under "Alle".
-        const ofType = (t) => type === 'all' || (!t.transfer && !t.whole && !isNeutral(t) && (type === 'in' ? t.amount > 0 : t.amount < 0));
+        // Refunds belong to the expenses they lower.
+        const ofType = (t) => {
+            if (type === 'all') return true;
+            if (t.transfer || t.whole || isNeutral(t)) return false;
+            const income = t.amount > 0 && !isRefund(t);
+            return type === 'in' ? income : !income;
+        };
         if (q) return base.filter((t) => ofType(t) && `${t.counterparty} ${t.purpose} ${t.category} ${String(Math.abs(t.amount)).replace('.', ',')}`.toLowerCase().includes(q));
         return base.filter((t) => ofType(t) && monthKey(t.booking_date) === month && (!filter || t.category === filter));
     }, [base, q, month, filter, type]);
@@ -89,7 +95,17 @@ export default function Transactions({ transactions, accounts, balances, month, 
         const last = days[days.length - 1];
         if (last?.date === t.booking_date) { last.items.push(t); last.sum += value; } else days.push({ date: t.booking_date, items: [t], sum: value });
     }
-    const total = list.reduce((s, t) => s + (t.transfer ? 0 : t.amount), 0);
+    // The line above the list: income and expenses, reckoned like the month
+    // card (transfers and corrections left out, refunds lower expenses); in
+    // an account's statement, how much that account changed instead.
+    let income = 0;
+    let expenses = 0;
+    for (const t of list) {
+        if (t.transfer || t.whole || isNeutral(t)) continue;
+        if (t.amount > 0 && !isRefund(t)) income += t.amount;
+        else expenses -= t.amount;
+    }
+    const change = list.reduce((s, t) => s + (t.transfer ? 0 : t.amount), 0);
 
     return (
         <div className="rise space-y-4">
@@ -143,7 +159,17 @@ export default function Transactions({ transactions, accounts, balances, month, 
             )}
 
             <p className="flex flex-wrap justify-between gap-x-3 gap-y-0.5 px-1 text-xs text-muted">
-                <span>{list.length} {list.length === 1 ? 'Eintrag' : 'Einträge'}{q ? ' gefunden' : ''} · Summe <span className="tabular">{money(total)}</span></span>
+                <span>
+                    {list.length} {list.length === 1 ? 'Eintrag' : 'Einträge'}{q ? ' gefunden' : ''}
+                    {account ? (
+                        <> · Veränderung <span className={`tabular font-medium ${change < 0 ? 'text-expense' : 'text-income'}`}>{change > 0 ? '+' : ''}{money(change)}</span></>
+                    ) : (
+                        <>
+                            {type !== 'out' && <> · Einnahmen <span className="tabular font-medium text-income">+{money(income)}</span></>}
+                            {type !== 'in' && <> · Ausgaben <span className="tabular font-medium text-expense">−{money(expenses)}</span></>}
+                        </>
+                    )}
+                </span>
                 {account && <span>Kontostand <span className="tabular font-semibold text-ink">{money(balances[account])}</span></span>}
             </p>
 
