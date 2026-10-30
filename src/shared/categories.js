@@ -82,16 +82,14 @@ export function categoryMemory(transactions) {
     return Object.fromEntries(Object.entries(counts).map(([k, c]) => [k, Object.entries(c).sort((a, b) => b[1] - a[1])[0][0]]));
 }
 
-// Category chips for the form: the defaults of that direction plus any found
-// in the data, most used first. A refund keeps its expense category, so
-// income chips also list the expense categories after the income ones.
+// Categories for the form: only those of that direction (expense or income,
+// own ones included), most used first.
 export function categoryOptions(transactions, kind) {
+    const list = kind === 'out' ? expenseCategories() : incomeCategories();
     const usage = {};
     for (const t of transactions) {
         if (isNeutral(t) || (kind === 'out') !== (t.amount < 0)) continue;
         usage[t.category] = (usage[t.category] || 0) + 1;
     }
-    const defaults = kind === 'out' ? expenseCategories() : incomeCategories();
-    const sorted = [...new Set([...defaults, ...Object.keys(usage)])].sort((a, b) => (usage[b] || 0) - (usage[a] || 0));
-    return kind === 'out' ? sorted : [...new Set([...sorted, ...expenseCategories()])];
+    return [...list].sort((a, b) => (usage[b] || 0) - (usage[a] || 0));
 }

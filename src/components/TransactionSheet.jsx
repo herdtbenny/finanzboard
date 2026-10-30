@@ -42,7 +42,11 @@ export default function TransactionSheet({
     const transfer = kind === 'transfer';
     const value = parseAmount(amount);
     const guess = memory[counterparty.trim().toLowerCase()] || categorize({ counterparty, purpose });
-    const suggested = NEUTRAL_CATEGORIES.includes(guess) ? FALLBACK : guess;
+    // Only categories of the chosen direction; an existing entry keeps its own
+    // (e.g. a refund booked under an expense category).
+    const kindOptions = transfer ? [] : optionsFor(kind);
+    const options = category && !kindOptions.includes(category) ? [...kindOptions, category] : kindOptions;
+    const suggested = NEUTRAL_CATEGORIES.includes(guess) || !kindOptions.includes(guess) ? FALLBACK : guess;
     // A transfer into a depot account counts as investing.
     const investing = kind === 'transfer' && accounts.find((a) => a.id === toAccountId)?.kind === 'depot';
     const transferCategory = investing ? 'Investieren' : 'Umbuchung';
@@ -187,7 +191,7 @@ export default function TransactionSheet({
 
                         <Field label="Kategorie" group>
                             <CategoryPicker
-                                options={optionsFor(kind).filter((c) => !NEUTRAL_CATEGORIES.includes(c))}
+                                options={options}
                                 value={shownCategory}
                                 picked={Boolean(category)}
                                 onPick={setCategory}
