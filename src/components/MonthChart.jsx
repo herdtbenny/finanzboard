@@ -20,9 +20,9 @@ export default function MonthChart({ transactions, month, onSelect }) {
     const max = Math.max(1, ...keys.flatMap((k) => [totals[k].in, totals[k].out]));
 
     return (
-        <section className="rounded-3xl border border-line bg-card p-4">
+        <section className="rounded-[28px] border border-line bg-card p-5">
             <div className="mb-4 flex items-center justify-between">
-                <h2 className="font-medium">Verlauf</h2>
+                <h2 className="text-[15px] font-semibold">Verlauf</h2>
                 <div className="flex gap-3 text-xs text-muted">
                     <span className="flex items-center gap-1.5"><span className="size-2 rounded-full bg-income" />Einnahmen</span>
                     <span className="flex items-center gap-1.5"><span className="size-2 rounded-full bg-expense" />Ausgaben</span>
@@ -41,10 +41,10 @@ export default function MonthChart({ transactions, month, onSelect }) {
                                 key={k}
                                 onClick={() => onSelect(k)}
                                 aria-label={`${monthLabel(k)}: Einnahmen ${moneyShort(totals[k].in)}, Ausgaben ${moneyShort(totals[k].out)}`}
-                                className={`flex h-full flex-1 items-end justify-center gap-[2px] rounded-full transition-opacity ${active ? '' : 'opacity-35'}`}
+                                className={`flex h-full flex-1 items-end justify-center gap-[2px] rounded-full transition-opacity ${active ? '' : 'opacity-30'}`}
                             >
-                                <span className="w-3 rounded-t bg-income sm:w-4" style={{ height: `${(totals[k].in / max) * 100}%` }} />
-                                <span className="w-3 rounded-t bg-expense sm:w-4" style={{ height: `${(totals[k].out / max) * 100}%` }} />
+                                <span className="w-3 rounded-t-[4px] bg-income sm:w-4" style={{ height: `${(totals[k].in / max) * 100}%` }} />
+                                <span className="w-3 rounded-t-[4px] bg-expense sm:w-4" style={{ height: `${(totals[k].out / max) * 100}%` }} />
                             </button>
                         );
                     })}

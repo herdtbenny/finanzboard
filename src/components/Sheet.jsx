@@ -14,10 +14,10 @@ export default function Sheet({ title, onClose, children }) {
     }, [onClose]);
 
     return (
-        <div className="fixed inset-0 z-20 flex items-end justify-center bg-black/40 sm:items-center" onClick={onClose}>
+        <div className="fade-in fixed inset-0 z-30 flex items-end justify-center bg-black/40 backdrop-blur-[2px] sm:items-center" onClick={onClose}>
             <div
                 onClick={(e) => e.stopPropagation()}
-                className="pb-safe max-h-[92dvh] w-full max-w-lg overflow-y-auto rounded-t-3xl bg-paper px-4 pt-3 sm:rounded-3xl"
+                className="sheet-in pb-safe max-h-[92dvh] w-full max-w-lg overflow-y-auto rounded-t-[28px] bg-paper px-4 pt-3 sm:rounded-[28px]"
             >
                 <div className="mx-auto mb-3 h-1 w-10 rounded-full bg-line sm:hidden" />
                 <div className="mb-4 flex items-center justify-between">

@@ -1,12 +1,12 @@
 import { useState } from 'react';
-import { Trash2 } from 'lucide-react';
+import { Trash2, Zap } from 'lucide-react';
 import { categorize } from '../shared/categories.js';
-import { amountInput, newId, parseAmount, todayIso } from '../shared/format.js';
+import { amountInput, money, moneyShort, newId, parseAmount, todayIso } from '../shared/format.js';
 import Sheet, { Field, inputClass } from './Sheet.jsx';
 
 // Add or edit one transaction. Until a category is tapped, it follows what
 // you typed: the category used most for that name before, else the keyword rules.
-export default function TransactionSheet({ transaction, accounts, lastAccountId, counterparties, memory, optionsFor, onSave, onDelete, onClose }) {
+export default function TransactionSheet({ transaction, accounts, lastAccountId, counterparties, memory, optionsFor, templates = [], onSave, onDelete, onClose }) {
     const editing = Boolean(transaction);
     const [kind, setKind] = useState(transaction && transaction.amount > 0 ? 'in' : 'out');
     const [amount, setAmount] = useState(amountInput(transaction?.amount));
@@ -25,6 +25,14 @@ export default function TransactionSheet({ transaction, accounts, lastAccountId,
     const shownCategory = category || suggested;
     const options = optionsFor(kind);
     const valid = Number.isFinite(value) && value !== 0 && accountId && date;
+
+    function applyTemplate(t) {
+        setKind(t.amount > 0 ? 'in' : 'out');
+        setAmount(amountInput(t.amount));
+        setCounterparty(t.counterparty);
+        setCategory(t.category);
+        if (accounts.some((a) => a.id === t.account_id)) setAccountId(t.account_id);
+    }
 
     async function save(e) {
         e.preventDefault();
@@ -63,6 +71,23 @@ export default function TransactionSheet({ transaction, accounts, lastAccountId,
     return (
         <Sheet title={editing ? 'Umsatz bearbeiten' : 'Neuer Umsatz'} onClose={onClose}>
             <form onSubmit={save} className="space-y-4 pb-4">
+                {!editing && templates.length > 0 && (
+                    <div className="flex flex-wrap gap-2">
+                        {templates.map((t) => (
+                            <button
+                                key={`${t.counterparty}|${t.amount}`}
+                                type="button"
+                                onClick={() => applyTemplate(t)}
+                                className="flex items-center gap-1.5 rounded-full border border-line bg-card py-1.5 pr-3 pl-2.5 text-sm active:scale-95 transition-transform"
+                            >
+                                <Zap size={13} className="text-muted" />
+                                {t.counterparty}
+                                <span className={`tabular ${t.amount > 0 ? 'text-income' : 'text-muted'}`}>{Number.isInteger(t.amount) ? moneyShort(Math.abs(t.amount)) : money(Math.abs(t.amount))}</span>
+                            </button>
+                        ))}
+                    </div>
+                )}
+
                 <div className="grid grid-cols-2 rounded-full border border-line bg-card p-1">
                     {[['out', 'Ausgabe', 'bg-expense'], ['in', 'Einnahme', 'bg-income']].map(([k, label, bg]) => (
                         <button

@@ -8,7 +8,7 @@
   --color-line: #e7e6e2;
   --color-income: #0f8a74;
   --color-expense: #c2410c;
-  --font-sans: ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif;
+  --font-sans: "Geist Variable", ui-sans-serif, system-ui, -apple-system, sans-serif;
 }
 
 /* Dark mode: own steps, validated against the dark surface (not a flip). */
@@ -24,7 +24,7 @@
   }
 }
 
-html { -webkit-text-size-adjust: 100%; }
+html { -webkit-text-size-adjust: 100%; overflow-x: clip; }
 body {
   background: var(--color-paper);
   color: var(--color-ink);
@@ -37,3 +37,13 @@ body {
 .no-scrollbar { scrollbar-width: none; }
 .pt-safe { padding-top: max(env(safe-area-inset-top), 0.75rem); }
 .pb-safe { padding-bottom: max(env(safe-area-inset-bottom), 1rem); }
+
+/* Tab content and sheets ease in instead of popping. */
+@keyframes rise { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: none; } }
+.rise { animation: rise 0.28s cubic-bezier(0.2, 0.8, 0.2, 1) both; }
+@keyframes sheet-in { from { transform: translateY(24px); opacity: 0; } to { transform: none; opacity: 1; } }
+.sheet-in { animation: sheet-in 0.3s cubic-bezier(0.2, 0.8, 0.2, 1) both; }
+@keyframes fade-in { from { opacity: 0; } to { opacity: 1; } }
+.fade-in { animation: fade-in 0.2s ease-out both; }
+@media (prefers-reduced-motion: reduce) { .rise, .sheet-in, .fade-in { animation: none; } }
+.pb-tabbar { padding-bottom: calc(6.5rem + env(safe-area-inset-bottom)); }
