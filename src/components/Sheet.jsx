@@ -1,7 +1,9 @@
 import { useEffect } from 'react';
+import { createPortal } from 'react-dom';
 import { X } from 'lucide-react';
 
-// Bottom sheet on phones, centred card on wide screens.
+// Bottom sheet on phones, centred card on wide screens. Rendered into <body>
+// so an animated (transformed) page around it can't trap it under the tab bar.
 export default function Sheet({ title, onClose, children }) {
     useEffect(() => {
         const onKey = (e) => e.key === 'Escape' && onClose();
@@ -13,7 +15,7 @@ export default function Sheet({ title, onClose, children }) {
         };
     }, [onClose]);
 
-    return (
+    return createPortal(
         <div className="fade-in fixed inset-0 z-30 flex items-end justify-center bg-black/40 backdrop-blur-[2px] sm:items-center" onClick={onClose}>
             <div
                 onClick={(e) => e.stopPropagation()}
@@ -28,7 +30,8 @@ export default function Sheet({ title, onClose, children }) {
                 </div>
                 {children}
             </div>
-        </div>
+        </div>,
+        document.body,
     );
 }
 
