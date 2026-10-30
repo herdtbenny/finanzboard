@@ -1,4 +1,4 @@
-import { isTransfer } from '../shared/categories.js';
+import { isNeutral } from '../shared/categories.js';
 import { monthKey, monthLabel, moneyShort, shiftMonth } from '../shared/format.js';
 
 const MONTHS = 6;
@@ -13,7 +13,7 @@ export default function MonthChart({ transactions, month, onSelect }) {
     const totals = Object.fromEntries(keys.map((k) => [k, { in: 0, out: 0 }]));
     for (const t of transactions) {
         const k = monthKey(t.booking_date);
-        if (!totals[k] || isTransfer(t)) continue;
+        if (!totals[k] || isNeutral(t)) continue;
         if (t.amount > 0) totals[k].in += t.amount;
         else totals[k].out -= t.amount;
     }

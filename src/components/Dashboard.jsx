@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { ChevronLeft, ChevronRight, Plus, Wallet } from 'lucide-react';
 import { api, Unauthorized } from '../api.js';
-import { categoryOf, isTransfer } from '../shared/categories.js';
+import { categoryMemory, categoryOf, categoryOptions, isNeutral } from '../shared/categories.js';
 import { money, moneyShort, monthKey, monthLabel, shiftMonth } from '../shared/format.js';
 import MonthChart from './MonthChart.jsx';
 import CategoryBars from './CategoryBars.jsx';
@@ -78,12 +78,16 @@ export default function Dashboard({ token, onLogout }) {
         for (const t of transactions) if (t.account_id in b) b[t.account_id] += t.amount;
         return b;
     }, [accounts, transactions]);
-    const counterparties = useMemo(
-        () => [...new Set(transactions.map((t) => t.counterparty).filter(Boolean))].slice(0, 200),
-        [transactions],
-    );
+    // Names for the form's autocomplete, most used first.
+    const counterparties = useMemo(() => {
+        const n = {};
+        for (const t of transactions) if (t.counterparty) n[t.counterparty] = (n[t.counterparty] || 0) + 1;
+        return Object.keys(n).sort((a, b) => n[b] - n[a]).slice(0, 300);
+    }, [transactions]);
+    const memory = useMemo(() => categoryMemory(transactions), [transactions]);
+    const options = useMemo(() => ({ in: categoryOptions(transactions, 'in'), out: categoryOptions(transactions, 'out') }), [transactions]);
 
-    const inMonth = transactions.filter((t) => monthKey(t.booking_date) === month && !isTransfer(t));
+    const inMonth = transactions.filter((t) => monthKey(t.booking_date) === month && !isNeutral(t));
     const income = inMonth.filter((t) => t.amount > 0).reduce((s, t) => s + t.amount, 0);
     const expense = -inMonth.filter((t) => t.amount < 0).reduce((s, t) => s + t.amount, 0);
     const total = Object.values(balances).reduce((s, v) => s + v, 0);
@@ -198,6 +202,8 @@ export default function Dashboard({ token, onLogout }) {
                     accounts={accounts}
                     lastAccountId={lastAccountId}
                     counterparties={counterparties}
+                    memory={memory}
+                    optionsFor={(kind) => options[kind]}
                     onSave={saveTransaction}
                     onDelete={deleteTransaction}
                     onClose={() => setTxSheet(null)}

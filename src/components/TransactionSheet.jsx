@@ -1,12 +1,12 @@
 import { useState } from 'react';
 import { Trash2 } from 'lucide-react';
-import { categorize, EXPENSE_CATEGORIES, INCOME_CATEGORIES } from '../shared/categories.js';
+import { categorize } from '../shared/categories.js';
 import { amountInput, newId, parseAmount, todayIso } from '../shared/format.js';
 import Sheet, { Field, inputClass } from './Sheet.jsx';
 
-// Add or edit one transaction. Until a category is tapped, it follows the
-// keyword rules as you type the counterparty / purpose.
-export default function TransactionSheet({ transaction, accounts, lastAccountId, counterparties, onSave, onDelete, onClose }) {
+// Add or edit one transaction. Until a category is tapped, it follows what
+// you typed: the category used most for that name before, else the keyword rules.
+export default function TransactionSheet({ transaction, accounts, lastAccountId, counterparties, memory, optionsFor, onSave, onDelete, onClose }) {
     const editing = Boolean(transaction);
     const [kind, setKind] = useState(transaction && transaction.amount > 0 ? 'in' : 'out');
     const [amount, setAmount] = useState(amountInput(transaction?.amount));
@@ -21,9 +21,9 @@ export default function TransactionSheet({ transaction, accounts, lastAccountId,
 
     const value = parseAmount(amount);
     const signed = kind === 'out' ? -Math.abs(value) : Math.abs(value);
-    const suggested = categorize({ counterparty, purpose, amount: signed || (kind === 'out' ? -1 : 1) });
+    const suggested = memory[counterparty.trim().toLowerCase()] || categorize({ counterparty, purpose });
     const shownCategory = category || suggested;
-    const options = kind === 'out' ? EXPENSE_CATEGORIES : INCOME_CATEGORIES;
+    const options = optionsFor(kind);
     const valid = Number.isFinite(value) && value !== 0 && accountId && date;
 
     async function save(e) {
