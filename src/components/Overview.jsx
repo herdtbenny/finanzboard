@@ -4,7 +4,7 @@ import BalanceChart from './BalanceChart.jsx';
 import MonthCard from './MonthCard.jsx';
 import { accountNames, TransactionRow } from './Transactions.jsx';
 import { mergeTransfers } from '../shared/transfers.js';
-import { Bar, Card, CardHeader } from './ui.jsx';
+import { Card, CardHeader } from './ui.jsx';
 
 export default function Overview({ accounts, balances, series, transactions, month, onMonth, onOpen, onAccount, goTo }) {
     const [point, setPoint] = useState(null);
@@ -23,27 +23,27 @@ export default function Overview({ accounts, balances, series, transactions, mon
                 <div className="mt-3">
                     <BalanceChart series={series} onActive={setPoint} />
                 </div>
-            </section>
 
-            <MonthCard transactions={transactions} month={month} onMonth={onMonth} onAll={() => goTo('analysis')} />
-
-            {/* Accounts: compact list with each one's share of the total */}
-            <Card className="px-2 py-2">
-                <ul>
+                {/* How the total splits across the accounts */}
+                <ul className="mt-3 space-y-0.5 border-t border-paper/15 pt-2">
                     {[...accounts].sort((a, b) => balances[b.id] - balances[a.id]).map((a) => {
                         const share = total > 0 ? Math.max(0, balances[a.id]) / total : 0;
                         return (
                             <li key={a.id}>
-                                <button onClick={() => onAccount(a.id)} className="flex w-full items-center gap-3 rounded-[18px] px-3 py-2 text-left active:bg-ink/5">
-                                    <span className="w-28 shrink-0 truncate text-sm">{a.name}</span>
-                                    <span className="flex-1"><Bar value={share} /></span>
-                                    <span className={`tabular w-24 shrink-0 text-right text-sm font-semibold ${balances[a.id] < 0 ? 'text-expense' : ''}`}>{money(balances[a.id])}</span>
+                                <button onClick={() => onAccount(a.id)} className="flex w-full items-center gap-2.5 rounded-full py-1 text-left text-xs active:opacity-60">
+                                    <span className="w-24 shrink-0 truncate opacity-70">{a.name}</span>
+                                    <span className="h-1 flex-1 rounded-full bg-paper/15">
+                                        <span className="block h-full rounded-full bg-paper/80" style={{ width: `${Math.max(share > 0 ? 2 : 0, share * 100)}%` }} />
+                                    </span>
+                                    <span className={`tabular w-[5.5rem] shrink-0 text-right font-medium ${balances[a.id] < 0 ? 'text-expense' : ''}`}>{money(balances[a.id])}</span>
                                 </button>
                             </li>
                         );
                     })}
                 </ul>
-            </Card>
+            </section>
+
+            <MonthCard transactions={transactions} month={month} onMonth={onMonth} onAll={() => goTo('analysis')} />
 
             <Card className="px-2 pb-2">
                 <div className="px-3"><CardHeader title="Zuletzt" action="Alle" onAction={() => goTo('transactions')} /></div>
