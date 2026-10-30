@@ -4,6 +4,7 @@ import { categorize } from '../shared/categories.js';
 import { amountInput, money, moneyShort, newId, parseAmount, todayIso } from '../shared/format.js';
 import { REPEATS } from '../shared/repeat.js';
 import Sheet, { Field, inputClass } from './Sheet.jsx';
+import ReceiptScanner from './ReceiptScanner.jsx';
 
 const KINDS = [['out', 'Ausgabe', 'bg-expense text-white'], ['in', 'Einnahme', 'bg-income text-white'], ['transfer', 'Umbuchung', 'bg-ink text-paper']];
 
@@ -45,6 +46,15 @@ export default function TransactionSheet({
     // Editing can't turn a transfer into a single booking or back.
     const kindLocked = (k) => editing && !isRecurring && (k === 'transfer') !== (initialKind === 'transfer');
     const title = isRecurring ? (editing ? 'Dauerauftrag' : 'Neuer Dauerauftrag') : editing ? 'Bearbeiten' : 'Neuer Eintrag';
+
+    // A read receipt fills what it found; the category then follows the shop.
+    function applyReceipt(r) {
+        setKind('out');
+        if (r.amount != null) setAmount(amountInput(r.amount));
+        if (r.shop) setCounterparty(r.shop);
+        if (r.date) setDate(r.date);
+        setCategory(null);
+    }
 
     function applyTemplate(t) {
         setKind(t.amount > 0 ? 'in' : 'out');
@@ -143,6 +153,8 @@ export default function TransactionSheet({
                         ))}
                     </div>
                 )}
+
+                {!editing && !isRecurring && <ReceiptScanner known={counterparties} onResult={applyReceipt} />}
 
                 <div className="grid grid-cols-3 rounded-full border border-line bg-card p-1">
                     {KINDS.map(([k, label, active]) => (

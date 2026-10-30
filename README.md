@@ -21,6 +21,12 @@ auf dem Handy als App installierbar („Zum Home-Bildschirm“).
   (heute vorausgefüllt), Konto, Notiz. Die Kategorie wird beim Tippen anhand von Stichwörtern
   vorgeschlagen (`REWE` → Lebensmittel); ein Tipp auf eine andere überschreibt das.
   Schon benutzte Namen werden zur Auswahl angeboten.
+- **Kassenzettel** (im „+“-Formular): „Kassenzettel“ fotografiert und liest den Zettel per
+  Texterkennung im Browser (Tesseract.js, `src/shared/ocr.js`); „Text scannen“ ist ein Textfeld
+  für die iPhone-Funktion „Text scannen“ oder eingefügten Text. Beides wertet
+  `src/shared/receipt.js` aus (Betrag, Datum, Händler) und füllt nur das Formular vor. Das Foto
+  verlässt das Gerät nicht; Texterkennung und deutsche Sprachdaten (~10 MB) lädt der Browser
+  beim ersten Scan von cdn.jsdelivr.net und hält sie im Cache.
 - **Umsatz antippen**: bearbeiten oder löschen (zweimal tippen zum Bestätigen).
 - **Kategorie im Diagramm antippen**: filtert die Umsatzliste.
 - **Umbuchung** (dritter Reiter im Formular): von Konto → nach Konto. Wird als zwei Buchungen
