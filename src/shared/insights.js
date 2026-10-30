@@ -68,10 +68,11 @@ export function balanceSeries(accounts, transactions, n = 12) {
 }
 
 // How much the total of all accounts changed in a month: every booking
-// counts, also depot value changes and corrections (transfers cancel out).
+// counts, also depot value changes (transfers cancel out) — except balance
+// corrections, which catch up on earlier months instead of this one.
 export function balanceChange(transactions, key) {
     let sum = 0;
-    for (const t of transactions) if (monthKey(t.booking_date) === key) sum += t.amount;
+    for (const t of transactions) if (monthKey(t.booking_date) === key && t.category !== 'Kontostand') sum += t.amount;
     return sum;
 }
 
