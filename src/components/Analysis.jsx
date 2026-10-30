@@ -3,10 +3,10 @@ import { isNeutral } from '../shared/categories.js';
 import { money, moneyShort, monthKey } from '../shared/format.js';
 import { averageBefore, monthSummary } from '../shared/insights.js';
 import MonthChart from './MonthChart.jsx';
-import { TransactionRow } from './Transactions.jsx';
+import { accountNames, TransactionRow } from './Transactions.jsx';
 import { Bar, Card, CardHeader, MonthSwitch, PageTitle } from './ui.jsx';
 
-export default function Analysis({ transactions, month, onMonth, onCategory, onOpen }) {
+export default function Analysis({ transactions, accounts, month, onMonth, onCategory, onOpen }) {
     const summary = monthSummary(transactions, month);
     const avg = averageBefore(transactions, month);
     const cats = Object.entries(summary.byCategory).sort((a, b) => b[1] - a[1]);
@@ -60,7 +60,7 @@ export default function Analysis({ transactions, month, onMonth, onCategory, onO
             {biggest.length > 0 && (
                 <Card className="px-2 pb-2">
                     <div className="px-3"><CardHeader title="Größte Ausgaben" /></div>
-                    <ul>{biggest.map((t) => <TransactionRow key={t.id} t={t} onOpen={onOpen} showDate />)}</ul>
+                    <ul>{biggest.map((t) => <TransactionRow key={t.id} t={t} onOpen={onOpen} names={accountNames(accounts)} showDate />)}</ul>
                 </Card>
             )}
         </div>

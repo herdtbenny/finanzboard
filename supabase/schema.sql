@@ -1,6 +1,8 @@
--- Run in Supabase → SQL Editor. Safe to re-run: drops and recreates everything.
--- WARNING: the drop statements delete all stored data.
+-- Fresh setup: run in Supabase → SQL Editor, then the numbered migrations
+-- (002-…) in order. WARNING: the drop statements delete all stored data.
 
+drop table if exists passkeys;
+drop table if exists recurrings;
 drop table if exists transactions;
 drop table if exists accounts;
 drop table if exists bank_sessions;

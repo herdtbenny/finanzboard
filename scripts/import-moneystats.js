@@ -7,9 +7,12 @@
 // not duplicated. Reads SUPABASE_URL / SUPABASE_SERVICE_ROLE_KEY from .env.local.
 //
 // Backup format: sections "????Name!!!!", records separated by "#", fields by
-// ";". Used sections: Accounts (id, name, …, sort order at 4) and Konten =
-// the transactions (account 0, date 1, amount 2, set-balance value 3,
-// title 5, group 8, note 9, transfer id 19). Groups are the categories.
+// ";". Used sections: Accounts (id, name, …, sort order at 4), Konten = the
+// transactions (account 0, date 1, amount 2, set-balance value 3, title 5,
+// group 8, note 9, standing order 10, transfer id 19), Groups = categories,
+// Recurrings (id, start, end, unit m/w/y, every n). The two halves of a
+// transfer share transfer id and date; a standing order's bookings point to
+// it, the latest one before today serves as its template.
 import crypto from 'node:crypto';
 import fs from 'node:fs';
 import { createClient } from '@supabase/supabase-js';
@@ -86,6 +89,7 @@ for (const { r } of records) {
     running[account.id] += amount;
 
     const base = `ms|${r[0]}|${r[1]}|${r[2]}|${r[3]}|${r[5]}|${r[12]}`;
+    const transferId = !isBalance && r[19] !== '0' ? `ms-tr-${r[19]}-${date}` : null;
     seenIds[base] = (seenIds[base] || 0) + 1;
     transactions.push({
         id: `ms-${hash(`${base}|${seenIds[base]}`)}`,
@@ -95,7 +99,51 @@ for (const { r } of records) {
         counterparty: isBalance ? 'Kontostand-Korrektur' : r[5].trim() || null,
         purpose: isBalance ? `Saldo auf ${Number(r[3]).toFixed(2).replace('.', ',')} € gesetzt` : r[9].trim() || null,
         category,
+        transfer_id: transferId,
     });
+}
+
+// Only pairs that really are two halves (one minus, one plus) stay linked.
+const halves = {};
+for (const t of transactions) if (t.transfer_id) (halves[t.transfer_id] ||= []).push(t);
+for (const pair of Object.values(halves)) {
+    const ok = pair.length === 2 && pair[0].amount === -pair[1].amount;
+    if (!ok) for (const t of pair) t.transfer_id = null;
+}
+
+// ---------- Standing orders still running ----------
+
+const UNIT = { m: 'month', w: 'week', y: 'year' };
+const recurrings = [];
+const doneTransfers = new Set();
+for (const rec of sections.Recurrings) {
+    const [id, start, end, unit, every] = rec;
+    if (end.slice(0, 10) <= today || !UNIT[unit]) continue;
+    const past = records.map((x) => x.r).filter((r) => r[10] === id && r[1].slice(0, 10) <= today);
+    if (!past.length) continue;
+    const t = past[past.length - 1];
+    const base = {
+        id: `ms-rec-${id}`,
+        amount: cents(Math.abs(Number(t[2]))),
+        counterparty: t[5].trim() || null,
+        purpose: t[9].trim() || null,
+        interval: UNIT[unit],
+        every: Number(every) || 1,
+        start_date: start.slice(0, 10),
+        end_date: end.slice(0, 10),
+        last_date: t[1].slice(0, 10),
+    };
+    if (t[19] !== '0') {
+        // Both halves have their own standing order in MoneyStats; one is enough.
+        if (doneTransfers.has(t[19])) continue;
+        doneTransfers.add(t[19]);
+        const tr = sections.Transfers.find((x) => x[0] === t[19]);
+        const negative = Number(t[2]) < 0;
+        const other = tr && (tr[1] === t[0] ? tr[2] : tr[1]);
+        recurrings.push({ ...base, kind: 'transfer', category: 'Umbuchung', account_id: `ms-${negative ? t[0] : other}`, to_account_id: `ms-${negative ? other : t[0]}` });
+    } else {
+        recurrings.push({ ...base, kind: Number(t[2]) < 0 ? 'out' : 'in', category: groups[t[8]] || 'Sonstiges', account_id: `ms-${t[0]}`, to_account_id: null });
+    }
 }
 
 // ---------- Summary ----------
@@ -111,7 +159,9 @@ console.log(`  ${'Gesamt'.padEnd(16)} ${' '.repeat(37)}Saldo ${fmt(Object.values
 const byCat = {};
 for (const t of transactions) byCat[t.category] = (byCat[t.category] || 0) + 1;
 console.log('\nKategorien:', Object.entries(byCat).sort((a, b) => b[1] - a[1]).map(([c, n]) => `${c} ${n}`).join(', '));
-console.log(`\n${transactions.length} Umsätze werden übernommen, ${future} in der Zukunft geplante übersprungen.`);
+console.log(`\n${transactions.length} Umsätze werden übernommen (${new Set(transactions.map((t) => t.transfer_id).filter(Boolean)).size} Umbuchungen verknüpft), ${future} in der Zukunft geplante übersprungen.`);
+console.log('\nDaueraufträge:');
+for (const r of recurrings) console.log(`  ${(r.counterparty || '').padEnd(14)} ${r.kind.padEnd(8)} ${fmt(r.amount).padStart(10)}  alle ${r.every} ${r.interval}  zuletzt ${r.last_date}  bis ${r.end_date}`);
 
 if (!write) {
     console.log('\nProbelauf, nichts geschrieben. Mit --write übernehmen.\n');
@@ -130,4 +180,6 @@ for (let i = 0; i < transactions.length; i += 500) {
     const { error } = await db.from('transactions').upsert(transactions.slice(i, i + 500));
     if (error) throw error;
 }
-console.log(`\nGeschrieben: ${accounts.length} Konten, ${transactions.length} Umsätze.\n`);
+const { error: recErr } = await db.from('recurrings').upsert(recurrings);
+if (recErr) throw recErr;
+console.log(`\nGeschrieben: ${accounts.length} Konten, ${transactions.length} Umsätze, ${recurrings.length} Daueraufträge.\n`);

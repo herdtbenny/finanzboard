@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { money, monthLabel } from '../shared/format.js';
 
 // Round step for about `count` gridlines: 1, 2, 2.5 or 5 × 10^n.
-function niceTicks(min, max, count = 4) {
+function niceTicks(min, max, count = 3) {
     const raw = (max - min || Math.abs(max) || 1) / count;
     const pow = 10 ** Math.floor(Math.log10(raw));
     const step = [1, 2, 2.5, 5, 10].map((m) => m * pow).find((s) => s >= raw);
@@ -46,7 +46,7 @@ export default function BalanceChart({ series, onActive }) {
     return (
         <div className="grid grid-cols-[1fr_auto] gap-x-3">
             <div
-                className="relative h-36 touch-none select-none"
+                className="relative h-24 touch-none select-none"
                 onPointerDown={pick}
                 onPointerMove={(e) => (e.pointerType === 'mouse' || e.buttons) && pick(e)}
                 onPointerUp={(e) => e.pointerType !== 'mouse' && leave()}
@@ -85,7 +85,7 @@ export default function BalanceChart({ series, onActive }) {
             </div>
 
             {/* Value scale */}
-            <div className="relative h-36 w-9 text-[10px] opacity-50">
+            <div className="relative h-24 w-9 text-[10px] opacity-50">
                 {ticks.map((t) => (
                     <span key={t} className="tabular absolute right-0 -translate-y-1/2" style={{ top: `${y(t)}%` }}>{axisLabel(t)}</span>
                 ))}

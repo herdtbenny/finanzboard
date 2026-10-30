@@ -36,5 +36,5 @@ export function db(req, res) {
     return client;
 }
 
-export const TRANSACTION_COLUMNS = 'id,account_id,booking_date,amount,counterparty,purpose,category,created_at';
+export const TRANSACTION_COLUMNS = 'id,account_id,booking_date,amount,counterparty,purpose,category,transfer_id,recurring_id,created_at';
 export const ACCOUNT_COLUMNS = 'id,name,opening_balance,sort_order';

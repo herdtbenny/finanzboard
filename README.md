@@ -13,12 +13,20 @@ auf dem Handy als App installierbar („Zum Home-Bildschirm“).
   Schon benutzte Namen werden zur Auswahl angeboten.
 - **Umsatz antippen**: bearbeiten oder löschen (zweimal tippen zum Bestätigen).
 - **Kategorie im Diagramm antippen**: filtert die Umsatzliste.
-- „Umbuchung“ (Geld zwischen eigenen Konten) zählt weder als Einnahme noch als Ausgabe.
-  Trag sie zweimal ein: als Ausgabe beim einen und als Einnahme beim anderen Konto.
+- **Umbuchung** (dritter Reiter im Formular): von Konto → nach Konto. Wird als zwei Buchungen
+  gespeichert, die zusammengehören, und in der Liste als eine Zeile gezeigt. Zählt weder als
+  Einnahme noch als Ausgabe.
+- **Daueraufträge**: „Wiederholen“ im Formular oder unter Konten → Daueraufträge. Fällige
+  Buchungen entstehen beim Öffnen der App und täglich per Cron (`api/_recurring.js`).
+- **Umsätze nach Konto filtern**: Auswahl „Alle Konten“ in Umsätze, oder ein Konto in der
+  Übersicht antippen. Dann zeigt die Liste den Kontoauszug mit Kontostand.
+- **Face ID**: Konten → Face ID → Einrichten (WebAuthn-Passkey, `api/passkey.js`). Danach ist die
+  App beim Öffnen gesperrt. Ein Passkey gilt nur für die Domain, auf der er eingerichtet wurde
+  (localhost ≠ Vercel-Domain); auf dem iPhone braucht es die HTTPS-Domain.
 
 ## Einrichtung
-1. **Supabase**: Projekt anlegen → SQL Editor → `supabase-schema.sql` ausführen.
-   Achtung: das Skript löscht und erstellt alle Tabellen neu.
+1. **Supabase**: Projekt anlegen → SQL Editor → `supabase/schema.sql` ausführen, danach die
+   nummerierten Migrationen (`supabase/002-…`) der Reihe nach. Achtung: `schema.sql` löscht alle Tabellen.
 2. **Lokal**: `cp .env.example .env.local`, ausfüllen, `npm install`, `npm run dev`
    (Frontend + API auf http://localhost:5173, die `api/`-Funktionen laufen im Vite-Server).
 3. **Vercel**: Repo importieren, die Variablen aus `.env.example` setzen, deployen.
@@ -28,6 +36,6 @@ auf dem Handy als App installierbar („Zum Home-Bildschirm“).
 
 ## Aufbau
 - `api/_lib.js`: Login-Prüfung, Supabase-Client
-- `api/data.js`: alle Konten und Umsätze · `api/transactions.js` / `api/accounts.js`: speichern (POST) und löschen (DELETE)
+- `api/data.js`: alle Konten, Umsätze, Daueraufträge (bucht Fälliges vorher) · `api/transactions.js` / `api/accounts.js` / `api/recurrings.js`: speichern (POST) und löschen (DELETE) · `api/passkey.js`: Face ID
 - `src/components/Dashboard.jsx`: Übersicht, Salden, Monat · `TransactionSheet.jsx`: Eingabeformular · `AccountsSheet.jsx`: Konten
 - `src/shared/categories.js`: Kategorien und Stichwort-Regeln für die Vorschläge

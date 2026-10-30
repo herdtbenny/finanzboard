@@ -1,13 +1,28 @@
 const KEY = 'finanzboard-token';
+const LOCK = 'finanzboard-faceid';
 
-// The token is kept in localStorage so the phone stays logged in (unlike the
-// websbybenny dashboard, which forgets it on reload).
+// Without the Face ID lock the token stays in localStorage, so the phone stays
+// logged in. With it, the token only lives in sessionStorage: closing the app
+// locks it, and opening asks for Face ID again.
+export function lockEnabled() {
+    try { return localStorage.getItem(LOCK) === '1'; } catch { return false; }
+}
+
 export function loadToken() {
-    try { return localStorage.getItem(KEY) || ''; } catch { return ''; }
+    try { return (lockEnabled() ? sessionStorage : localStorage).getItem(KEY) || ''; } catch { return ''; }
 }
 
 export function saveToken(token) {
-    try { token ? localStorage.setItem(KEY, token) : localStorage.removeItem(KEY); } catch { /* private mode */ }
+    try {
+        localStorage.removeItem(KEY);
+        sessionStorage.removeItem(KEY);
+        if (token) (lockEnabled() ? sessionStorage : localStorage).setItem(KEY, token);
+    } catch { /* private mode */ }
+}
+
+export function setLock(on, token) {
+    try { on ? localStorage.setItem(LOCK, '1') : localStorage.removeItem(LOCK); } catch { /* private mode */ }
+    saveToken(token);
 }
 
 export class Unauthorized extends Error {}
@@ -19,7 +34,7 @@ export async function api(path, token, { method = 'GET', body } = {}) {
         body: body ? JSON.stringify(body) : undefined,
     });
     const data = await res.json().catch(() => ({}));
-    if (res.status === 401 && path !== 'login') throw new Unauthorized();
+    if (res.status === 401 && !path.startsWith('login') && !path.startsWith('passkey')) throw new Unauthorized();
     if (!res.ok) throw new Error(data.error || `Fehler ${res.status}`);
     return data;
 }

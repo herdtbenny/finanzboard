@@ -1,49 +1,73 @@
 import { useMemo, useState } from 'react';
-import { Search, X } from 'lucide-react';
+import { ArrowLeftRight, ChevronDown, Repeat, Search, X } from 'lucide-react';
 import { CategoryIcon } from '../shared/categoryIcons.jsx';
 import { dayLabel, money, monthKey } from '../shared/format.js';
+import { mergeTransfers, transferTitle } from '../shared/transfers.js';
 import { MonthSwitch, PageTitle } from './ui.jsx';
 
 const PAGE = 80;
 
-export function TransactionRow({ t, onOpen, showDate, accountName }) {
-    const sub = [t.category, showDate && dayLabel(t.booking_date), accountName].filter(Boolean).join(' · ');
+// One line in a list. A merged transfer shows "from → to" and its amount
+// without sign.
+export function TransactionRow({ t, onOpen, showDate, names }) {
+    const isTransfer = Boolean(t.transfer);
+    const title = isTransfer ? transferTitle(t) : t.counterparty || t.purpose || 'Unbekannt';
+    const sub = [
+        isTransfer ? `${names[t.transfer.from.account_id]} → ${names[t.transfer.to.account_id]}` : t.category,
+        showDate && dayLabel(t.booking_date),
+        !isTransfer && names.__multi && names[t.account_id],
+    ].filter(Boolean).join(' · ');
+
     return (
         <li>
             <button onClick={() => onOpen(t)} className="flex w-full items-center gap-3 rounded-[20px] px-3 py-2.5 text-left active:bg-ink/5">
-                <CategoryIcon category={t.category} />
+                {isTransfer
+                    ? <span className="flex size-10 shrink-0 items-center justify-center rounded-full bg-ink/[0.06]"><ArrowLeftRight size={18} strokeWidth={1.8} /></span>
+                    : <CategoryIcon category={t.category} />}
                 <div className="min-w-0 flex-1">
-                    <p className="truncate text-[15px] font-medium">{t.counterparty || t.purpose || 'Unbekannt'}</p>
+                    <p className="flex items-center gap-1.5 truncate text-[15px] font-medium">
+                        <span className="truncate">{title}</span>
+                        {t.recurring_id && <Repeat size={12} className="shrink-0 text-muted" aria-label="Dauerauftrag" />}
+                    </p>
                     <p className="truncate text-xs text-muted">{sub}</p>
                 </div>
-                <p className={`tabular shrink-0 text-[15px] font-semibold ${t.amount > 0 ? 'text-income' : ''}`}>
-                    {t.amount > 0 ? '+' : ''}{money(t.amount)}
+                <p className={`tabular shrink-0 text-[15px] font-semibold ${isTransfer ? 'text-muted' : t.amount > 0 ? 'text-income' : ''}`}>
+                    {!isTransfer && t.amount > 0 ? '+' : ''}{money(t.amount)}
                 </p>
             </button>
         </li>
     );
 }
 
-// Searching looks through all months; otherwise the list shows the chosen
-// month, optionally narrowed to one category.
-export default function Transactions({ transactions, accounts, month, onMonth, filter, onClearFilter, onOpen }) {
+export function accountNames(accounts) {
+    return { ...Object.fromEntries(accounts.map((a) => [a.id, a.name])), __multi: accounts.length > 1 };
+}
+
+// Searching looks through all months. Without an account filter, transfers
+// show as one entry; with one, the list is that account's statement: each
+// half of a transfer with its sign, plus the balance.
+export default function Transactions({ transactions, accounts, balances, month, onMonth, filter, onClearFilter, account, onAccount, onOpen }) {
     const [query, setQuery] = useState('');
     const [shown, setShown] = useState(PAGE);
-    const accountName = Object.fromEntries(accounts.map((a) => [a.id, a.name]));
-    const multi = accounts.length > 1;
+    const names = accountNames(accounts);
     const q = query.toLowerCase().trim();
 
+    const base = useMemo(
+        () => (account ? transactions.filter((t) => t.account_id === account) : mergeTransfers(transactions)),
+        [transactions, account],
+    );
     const list = useMemo(() => {
-        if (q) return transactions.filter((t) => `${t.counterparty} ${t.purpose} ${t.category} ${String(Math.abs(t.amount)).replace('.', ',')}`.toLowerCase().includes(q));
-        return transactions.filter((t) => monthKey(t.booking_date) === month && (!filter || t.category === filter));
-    }, [transactions, q, month, filter]);
+        if (q) return base.filter((t) => `${t.counterparty} ${t.purpose} ${t.category} ${String(Math.abs(t.amount)).replace('.', ',')}`.toLowerCase().includes(q));
+        return base.filter((t) => monthKey(t.booking_date) === month && (!filter || t.category === filter));
+    }, [base, q, month, filter]);
 
     const days = [];
     for (const t of list.slice(0, shown)) {
+        const value = t.transfer ? 0 : t.amount;
         const last = days[days.length - 1];
-        if (last?.date === t.booking_date) { last.items.push(t); last.sum += t.amount; } else days.push({ date: t.booking_date, items: [t], sum: t.amount });
+        if (last?.date === t.booking_date) { last.items.push(t); last.sum += value; } else days.push({ date: t.booking_date, items: [t], sum: value });
     }
-    const total = list.reduce((s, t) => s + t.amount, 0);
+    const total = list.reduce((s, t) => s + (t.transfer ? 0 : t.amount), 0);
 
     return (
         <div className="rise space-y-4">
@@ -60,22 +84,35 @@ export default function Transactions({ transactions, accounts, month, onMonth, f
                 />
             </label>
 
-            {!q && (
-                <div className="flex flex-wrap items-center justify-between gap-2">
-                    <MonthSwitch month={month} onChange={onMonth} />
-                    {filter && (
-                        <button onClick={onClearFilter} className="flex items-center gap-1.5 rounded-full bg-ink py-2 pr-3 pl-4 text-sm text-paper">
-                            {filter} <X size={14} />
-                        </button>
-                    )}
-                </div>
-            )}
+            <div className="flex flex-wrap items-center gap-2">
+                {!q && <MonthSwitch month={month} onChange={onMonth} />}
+                {accounts.length > 1 && (
+                    <label className={`relative flex items-center rounded-full border ${account ? 'border-ink bg-ink text-paper' : 'border-line bg-card'}`}>
+                        <select
+                            value={account || ''}
+                            onChange={(e) => { onAccount(e.target.value || null); setShown(PAGE); }}
+                            aria-label="Konto"
+                            className="appearance-none bg-transparent py-2.5 pr-9 pl-4 text-sm font-medium outline-none"
+                        >
+                            <option value="">Alle Konten</option>
+                            {accounts.map((a) => <option key={a.id} value={a.id}>{a.name}</option>)}
+                        </select>
+                        <ChevronDown size={15} className="pointer-events-none absolute right-3" />
+                    </label>
+                )}
+                {filter && !q && (
+                    <button onClick={onClearFilter} className="flex items-center gap-1.5 rounded-full bg-ink py-2.5 pr-3 pl-4 text-sm text-paper">
+                        {filter} <X size={14} />
+                    </button>
+                )}
+            </div>
 
-            <p className="px-1 text-xs text-muted">
-                {list.length} {list.length === 1 ? 'Umsatz' : 'Umsätze'}{q ? ' gefunden' : ''} · Summe <span className="tabular">{money(total)}</span>
+            <p className="flex justify-between px-1 text-xs text-muted">
+                <span>{list.length} {list.length === 1 ? 'Eintrag' : 'Einträge'}{q ? ' gefunden' : ''} · Summe <span className="tabular">{money(total)}</span></span>
+                {account && <span>Kontostand <span className="tabular font-semibold text-ink">{money(balances[account])}</span></span>}
             </p>
 
-            {!list.length && <p className="py-12 text-center text-sm text-muted">{q ? 'Nichts gefunden.' : 'Noch keine Umsätze in diesem Monat.'}</p>}
+            {!list.length && <p className="py-12 text-center text-sm text-muted">{q ? 'Nichts gefunden.' : 'Keine Umsätze in diesem Monat.'}</p>}
 
             {days.map((day) => (
                 <section key={day.date}>
@@ -84,7 +121,7 @@ export default function Transactions({ transactions, accounts, month, onMonth, f
                         <span className="tabular">{money(day.sum)}</span>
                     </div>
                     <ul className="rounded-[24px] border border-line bg-card p-1">
-                        {day.items.map((t) => <TransactionRow key={t.id} t={t} onOpen={onOpen} accountName={multi ? accountName[t.account_id] : null} />)}
+                        {day.items.map((t) => <TransactionRow key={t.id} t={t} onOpen={onOpen} names={account ? { ...names, __multi: false } : names} />)}
                     </ul>
                 </section>
             ))}

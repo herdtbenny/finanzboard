@@ -1,11 +1,15 @@
 import { useState } from 'react';
-import { ChevronRight, Download, LogOut, Plus, Trash2 } from 'lucide-react';
-import { amountInput, money, newId, parseAmount } from '../shared/format.js';
+import { ArrowLeftRight, ChevronRight, Download, LogOut, Plus, Repeat, ScanFace, Trash2 } from 'lucide-react';
+import { lockEnabled, setLock } from '../api.js';
+import { faceIdError, faceIdSupported, registerFaceId } from '../passkey.js';
+import { CategoryIcon } from '../shared/categoryIcons.jsx';
+import { repeatLabel, nextDate } from '../shared/repeat.js';
+import { amountInput, dayLabel, money, newId, parseAmount } from '../shared/format.js';
 import { exportCsv } from '../shared/exportCsv.js';
 import Sheet, { Field, inputClass } from './Sheet.jsx';
-import { Card, PageTitle } from './ui.jsx';
+import { Card, CardHeader, PageTitle } from './ui.jsx';
 
-export default function Accounts({ accounts, balances, transactions, onSave, onDelete, onLogout }) {
+export default function Accounts({ token, accounts, balances, transactions, recurrings, onSave, onDelete, onOpenRecurring, onLogout }) {
     const [editing, setEditing] = useState(null);
     const counts = {};
     for (const t of transactions) counts[t.account_id] = (counts[t.account_id] || 0) + 1;
@@ -38,6 +42,10 @@ export default function Accounts({ accounts, balances, transactions, onSave, onD
                 <Plus size={18} /> Konto hinzufügen
             </button>
 
+            <Recurrings recurrings={recurrings} accounts={accounts} onOpen={onOpenRecurring} />
+
+            <FaceId token={token} />
+
             <Card className="space-y-1 p-2">
                 <button onClick={() => exportCsv(transactions, accounts)} className="flex w-full items-center gap-3 rounded-full px-4 py-3 text-left text-sm font-medium active:bg-ink/5">
                     <Download size={17} /> Alle Umsätze als CSV exportieren
@@ -57,6 +65,101 @@ export default function Accounts({ accounts, balances, transactions, onSave, onD
                 />
             )}
         </div>
+    );
+}
+
+// Standing orders with their rhythm and next booking date.
+function Recurrings({ recurrings, accounts, onOpen }) {
+    const names = Object.fromEntries(accounts.map((a) => [a.id, a.name]));
+    const rows = recurrings
+        .map((r) => ({ ...r, next: nextDate(r) }))
+        .sort((a, b) => (a.next || '9999').localeCompare(b.next || '9999'));
+    const monthly = rows
+        .filter((r) => r.next && r.kind === 'out')
+        .reduce((s, r) => s + Number(r.amount) * ({ week: 52 / 12, month: 1, year: 1 / 12 }[r.interval] / r.every), 0);
+
+    return (
+        <Card className="px-2 pb-2">
+            <div className="px-3"><CardHeader title="Daueraufträge" action="Neu" onAction={() => onOpen({})} /></div>
+            {!rows.length && <p className="px-3 pb-3 text-sm text-muted">Noch keine. Wiederkehrende Zahlungen werden automatisch gebucht.</p>}
+            <ul>
+                {rows.map((r) => (
+                    <li key={r.id}>
+                        <button onClick={() => onOpen(r)} className={`flex w-full items-center gap-3 rounded-[20px] px-3 py-2.5 text-left active:bg-ink/5 ${r.next ? '' : 'opacity-45'}`}>
+                            {r.kind === 'transfer'
+                                ? <span className="flex size-10 shrink-0 items-center justify-center rounded-full bg-ink/[0.06]"><ArrowLeftRight size={18} strokeWidth={1.8} /></span>
+                                : <CategoryIcon category={r.category} />}
+                            <div className="min-w-0 flex-1">
+                                <p className="truncate text-[15px] font-medium">{r.counterparty || (r.kind === 'transfer' ? 'Umbuchung' : r.category)}</p>
+                                <p className="flex items-center gap-1 truncate text-xs text-muted">
+                                    <Repeat size={11} className="shrink-0" />
+                                    {repeatLabel(r)} · {r.next ? `nächste ${dayLabel(r.next)}` : 'beendet'}
+                                    {r.kind === 'transfer' && ` · ${names[r.account_id]} → ${names[r.to_account_id]}`}
+                                </p>
+                            </div>
+                            <span className={`tabular shrink-0 text-[15px] font-semibold ${r.kind === 'in' ? 'text-income' : r.kind === 'transfer' ? 'text-muted' : ''}`}>
+                                {r.kind === 'in' ? '+' : r.kind === 'out' ? '−' : ''}{money(r.amount)}
+                            </span>
+                        </button>
+                    </li>
+                ))}
+            </ul>
+            {monthly > 0 && (
+                <p className="flex justify-between px-3 pt-2 pb-2 text-xs text-muted">
+                    <span>Fixe Ausgaben pro Monat</span>
+                    <span className="tabular font-semibold text-ink">{money(monthly)}</span>
+                </p>
+            )}
+        </Card>
+    );
+}
+
+// Face ID / Touch ID: sets up a passkey for this device and turns on the
+// lock, so opening the app asks for Face ID instead of staying logged in.
+function FaceId({ token }) {
+    const [on, setOn] = useState(lockEnabled);
+    const [busy, setBusy] = useState(false);
+    const [message, setMessage] = useState('');
+    if (!faceIdSupported()) return null;
+
+    async function enable() {
+        setBusy(true);
+        setMessage('');
+        try {
+            await registerFaceId(token);
+            setLock(true, token);
+            setOn(true);
+            setMessage('Eingerichtet. Beim nächsten Öffnen entsperrst du mit Face ID.');
+        } catch (e) {
+            setMessage(faceIdError(e));
+        }
+        setBusy(false);
+    }
+
+    function disable() {
+        setLock(false, token);
+        setOn(false);
+        setMessage('');
+    }
+
+    return (
+        <Card className="p-2">
+            <div className="flex items-center gap-3 px-3 py-2">
+                <ScanFace size={20} className="shrink-0" />
+                <div className="min-w-0 flex-1">
+                    <p className="text-sm font-medium">Face ID</p>
+                    <p className="text-xs text-muted">{on ? 'Beim Öffnen gesperrt' : 'Entsperren statt Passwort'}</p>
+                </div>
+                {on ? (
+                    <button onClick={disable} className="rounded-full border border-line px-4 py-2 text-sm font-medium">Aus</button>
+                ) : (
+                    <button onClick={enable} disabled={busy} className="rounded-full bg-ink px-4 py-2 text-sm font-medium text-paper disabled:opacity-40">
+                        {busy ? '…' : 'Einrichten'}
+                    </button>
+                )}
+            </div>
+            {message && <p className="px-3 pb-2 text-xs text-muted">{message}</p>}
+        </Card>
     );
 }
 

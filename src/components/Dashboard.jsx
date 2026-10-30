@@ -19,8 +19,11 @@ export default function Dashboard({ token, onLogout }) {
     const [tab, setTab] = useState('overview');
     const [month, setMonth] = useState(currentMonth);
     const [category, setCategory] = useState(null);
-    // null | 'new' | a transaction being edited
+    const [account, setAccount] = useState(null);
+    // null | 'new' | a transaction (or merged transfer) being edited
     const [txSheet, setTxSheet] = useState(null);
+    // null | {} for a new standing order | the one being edited
+    const [recurringSheet, setRecurringSheet] = useState(null);
     const [newAccount, setNewAccount] = useState(false);
     const [lastAccountId, setLastAccountId] = useState(null);
 
@@ -34,22 +37,37 @@ export default function Dashboard({ token, onLogout }) {
         }
     }, [token, onLogout]);
 
-    useEffect(() => {
-        call('data').then(setData).catch((e) => setError(e.message));
-    }, [call]);
+    const load = useCallback(() => call('data').then(setData), [call]);
 
-    // Every save answers with the stored row, which replaces the local copy —
+    useEffect(() => {
+        load().catch((e) => setError(e.message));
+    }, [load]);
+
+    // Every save answers with the stored rows, which replace the local copies —
     // no reload of the whole list.
-    async function saveTransaction(t) {
-        const saved = await call('transactions', { method: 'POST', body: t });
-        setLastAccountId(saved.account_id);
-        setData((d) => ({ ...d, transactions: [...d.transactions.filter((x) => x.id !== saved.id), saved].sort(byDateDesc) }));
-        setMonth(monthKey(saved.booking_date));
+    async function saveTransactions(rows) {
+        const saved = await call('transactions', { method: 'POST', body: rows });
+        const ids = new Set(saved.map((t) => t.id));
+        if (!saved[0].transfer_id) setLastAccountId(saved[0].account_id);
+        setData((d) => ({ ...d, transactions: [...d.transactions.filter((x) => !ids.has(x.id)), ...saved].sort(byDateDesc) }));
+        setMonth(monthKey(saved[0].booking_date));
     }
 
-    async function deleteTransaction(id) {
-        await call(`transactions?id=${encodeURIComponent(id)}`, { method: 'DELETE' });
-        setData((d) => ({ ...d, transactions: d.transactions.filter((x) => x.id !== id) }));
+    // { id } for one booking, { transfer_id } for both halves of a transfer.
+    async function deleteTransaction({ id, transfer_id: transferId }) {
+        await call(`transactions?${transferId ? `transfer_id=${encodeURIComponent(transferId)}` : `id=${encodeURIComponent(id)}`}`, { method: 'DELETE' });
+        setData((d) => ({ ...d, transactions: d.transactions.filter((x) => (transferId ? x.transfer_id !== transferId : x.id !== id)) }));
+    }
+
+    // The server books what's due right away, so reload everything after.
+    async function saveRecurring(r) {
+        await call('recurrings', { method: 'POST', body: r });
+        await load();
+    }
+
+    async function deleteRecurring(id) {
+        await call(`recurrings?id=${encodeURIComponent(id)}`, { method: 'DELETE' });
+        setData((d) => ({ ...d, recurrings: d.recurrings.filter((r) => r.id !== id) }));
     }
 
     async function saveAccount(a) {
@@ -62,10 +80,8 @@ export default function Dashboard({ token, onLogout }) {
 
     async function deleteAccount(id) {
         await call(`accounts?id=${encodeURIComponent(id)}`, { method: 'DELETE' });
-        setData((d) => ({
-            accounts: d.accounts.filter((x) => x.id !== id),
-            transactions: d.transactions.filter((x) => x.account_id !== id),
-        }));
+        await load();
+        if (account === id) setAccount(null);
     }
 
     const accounts = useMemo(() => data?.accounts || [], [data]);
@@ -94,6 +110,7 @@ export default function Dashboard({ token, onLogout }) {
     const pickMonth = (m) => { setMonth(m); setCategory(null); };
     const goTo = (t) => { setTab(t); window.scrollTo({ top: 0 }); };
     const openCategory = (c) => { setCategory(c); goTo('transactions'); };
+    const openAccount = (id) => { setAccount(id); goTo('transactions'); };
 
     let content;
     if (error) {
@@ -110,13 +127,23 @@ export default function Dashboard({ token, onLogout }) {
             </div>
         );
     } else if (tab === 'overview') {
-        content = <Overview accounts={accounts} balances={balances} series={series} transactions={transactions} month={month} onMonth={pickMonth} onOpen={setTxSheet} goTo={goTo} />;
+        content = <Overview accounts={accounts} balances={balances} series={series} transactions={transactions} month={month} onMonth={pickMonth} onOpen={setTxSheet} onAccount={openAccount} goTo={goTo} />;
     } else if (tab === 'transactions') {
-        content = <Transactions transactions={transactions} accounts={accounts} month={month} onMonth={pickMonth} filter={category} onClearFilter={() => setCategory(null)} onOpen={setTxSheet} />;
+        content = (
+            <Transactions
+                transactions={transactions} accounts={accounts} balances={balances} month={month} onMonth={pickMonth}
+                filter={category} onClearFilter={() => setCategory(null)} account={account} onAccount={setAccount} onOpen={setTxSheet}
+            />
+        );
     } else if (tab === 'analysis') {
-        content = <Analysis transactions={transactions} month={month} onMonth={pickMonth} onCategory={openCategory} onOpen={setTxSheet} />;
+        content = <Analysis transactions={transactions} accounts={accounts} month={month} onMonth={pickMonth} onCategory={openCategory} onOpen={setTxSheet} />;
     } else {
-        content = <Accounts accounts={accounts} balances={balances} transactions={transactions} onSave={saveAccount} onDelete={deleteAccount} onLogout={onLogout} />;
+        content = (
+            <Accounts
+                token={token} accounts={accounts} balances={balances} transactions={transactions} recurrings={data.recurrings || []}
+                onSave={saveAccount} onDelete={deleteAccount} onOpenRecurring={setRecurringSheet} onLogout={onLogout}
+            />
+        );
     }
 
     const ready = data && accounts.length > 0;
@@ -126,18 +153,21 @@ export default function Dashboard({ token, onLogout }) {
 
             {ready && <TabBar tab={tab} onTab={goTo} onAdd={() => setTxSheet('new')} />}
 
-            {txSheet && (
+            {(txSheet || recurringSheet) && (
                 <TransactionSheet
-                    transaction={txSheet === 'new' ? null : txSheet}
+                    entry={txSheet && txSheet !== 'new' ? txSheet : null}
+                    recurring={recurringSheet}
                     accounts={accounts}
                     lastAccountId={lastAccountId}
                     counterparties={counterparties}
                     memory={memory}
                     optionsFor={(kind) => options[kind]}
                     templates={templates}
-                    onSave={saveTransaction}
-                    onDelete={deleteTransaction}
-                    onClose={() => setTxSheet(null)}
+                    onSaveTransactions={saveTransactions}
+                    onDeleteTransaction={deleteTransaction}
+                    onSaveRecurring={saveRecurring}
+                    onDeleteRecurring={deleteRecurring}
+                    onClose={() => { setTxSheet(null); setRecurringSheet(null); }}
                 />
             )}
 

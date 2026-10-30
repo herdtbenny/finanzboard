@@ -1,30 +1,50 @@
 import { useState } from 'react';
-import { Trash2, Zap } from 'lucide-react';
+import { ArrowDown, Repeat, Trash2, Zap } from 'lucide-react';
 import { categorize } from '../shared/categories.js';
 import { amountInput, money, moneyShort, newId, parseAmount, todayIso } from '../shared/format.js';
+import { REPEATS } from '../shared/repeat.js';
 import Sheet, { Field, inputClass } from './Sheet.jsx';
 
-// Add or edit one transaction. Until a category is tapped, it follows what
-// you typed: the category used most for that name before, else the keyword rules.
-export default function TransactionSheet({ transaction, accounts, lastAccountId, counterparties, memory, optionsFor, templates = [], onSave, onDelete, onClose }) {
-    const editing = Boolean(transaction);
-    const [kind, setKind] = useState(transaction && transaction.amount > 0 ? 'in' : 'out');
-    const [amount, setAmount] = useState(amountInput(transaction?.amount));
-    const [counterparty, setCounterparty] = useState(transaction?.counterparty || '');
-    const [purpose, setPurpose] = useState(transaction?.purpose || '');
-    const [date, setDate] = useState(transaction?.booking_date || todayIso());
-    const [accountId, setAccountId] = useState(transaction?.account_id || lastAccountId || accounts[0]?.id);
-    const [category, setCategory] = useState(transaction?.category || null);
+const KINDS = [['out', 'Ausgabe', 'bg-expense text-white'], ['in', 'Einnahme', 'bg-income text-white'], ['transfer', 'Umbuchung', 'bg-ink text-paper']];
+
+// One form for everything that moves money:
+//   entry      a transaction or merged transfer to edit (null = new)
+//   recurring  a standing order to edit (or {} for a new one)
+// A new entry with "Wiederholen" set becomes a standing order instead. Until a
+// category is tapped it follows what was typed: the category used most for
+// that name before, else the keyword rules.
+export default function TransactionSheet({
+    entry, recurring, accounts, lastAccountId, counterparties, memory, optionsFor, templates = [],
+    onSaveTransactions, onDeleteTransaction, onSaveRecurring, onDeleteRecurring, onClose,
+}) {
+    const isRecurring = Boolean(recurring);
+    const editing = Boolean(entry || recurring?.id);
+    const src = recurring || entry || {};
+    const initialKind = recurring?.kind || (entry?.transfer ? 'transfer' : entry && entry.amount > 0 ? 'in' : 'out');
+
+    const [kind, setKind] = useState(initialKind);
+    const [amount, setAmount] = useState(amountInput(src.amount));
+    const [counterparty, setCounterparty] = useState(entry?.transfer && src.counterparty === 'Umbuchung' ? '' : src.counterparty || '');
+    const [purpose, setPurpose] = useState(src.purpose || '');
+    const [date, setDate] = useState(recurring?.start_date || entry?.booking_date || todayIso());
+    const fallbackAccount = lastAccountId || accounts[0]?.id;
+    const [accountId, setAccountId] = useState(entry?.transfer?.from.account_id || src.account_id || fallbackAccount);
+    const [toAccountId, setToAccountId] = useState(entry?.transfer?.to.account_id || recurring?.to_account_id || accounts.find((a) => a.id !== (src.account_id || fallbackAccount))?.id);
+    const [category, setCategory] = useState(src.category && !entry?.transfer ? src.category : null);
+    const [repeat, setRepeat] = useState(recurring?.interval ? `${recurring.interval}:${recurring.every}` : isRecurring ? 'month:1' : '');
+    const [endDate, setEndDate] = useState(recurring?.end_date || '');
     const [busy, setBusy] = useState(false);
     const [confirmDelete, setConfirmDelete] = useState(false);
     const [error, setError] = useState('');
 
+    const transfer = kind === 'transfer';
     const value = parseAmount(amount);
-    const signed = kind === 'out' ? -Math.abs(value) : Math.abs(value);
     const suggested = memory[counterparty.trim().toLowerCase()] || categorize({ counterparty, purpose });
     const shownCategory = category || suggested;
-    const options = optionsFor(kind);
-    const valid = Number.isFinite(value) && value !== 0 && accountId && date;
+    const valid = Number.isFinite(value) && value !== 0 && accountId && date && (!transfer || (toAccountId && toAccountId !== accountId));
+    // Editing can't turn a transfer into a single booking or back.
+    const kindLocked = (k) => editing && !isRecurring && (k === 'transfer') !== (initialKind === 'transfer');
+    const title = isRecurring ? (editing ? 'Dauerauftrag' : 'Neuer Dauerauftrag') : editing ? 'Bearbeiten' : 'Neuer Eintrag';
 
     function applyTemplate(t) {
         setKind(t.amount > 0 ? 'in' : 'out');
@@ -34,21 +54,11 @@ export default function TransactionSheet({ transaction, accounts, lastAccountId,
         if (accounts.some((a) => a.id === t.account_id)) setAccountId(t.account_id);
     }
 
-    async function save(e) {
-        e.preventDefault();
-        if (!valid) return;
+    async function run(fn) {
         setBusy(true);
         setError('');
         try {
-            await onSave({
-                id: transaction?.id || newId(),
-                account_id: accountId,
-                booking_date: date,
-                amount: signed,
-                counterparty,
-                purpose,
-                category: shownCategory,
-            });
+            await fn();
             onClose();
         } catch (err) {
             setError(err.message);
@@ -56,45 +66,92 @@ export default function TransactionSheet({ transaction, accounts, lastAccountId,
         }
     }
 
-    async function remove() {
-        if (!confirmDelete) return setConfirmDelete(true);
-        setBusy(true);
-        try {
-            await onDelete(transaction.id);
-            onClose();
-        } catch (err) {
-            setError(err.message);
-            setBusy(false);
+    function save(e) {
+        e.preventDefault();
+        if (!valid) return;
+        const abs = Math.abs(value);
+
+        if (isRecurring || repeat) {
+            const [interval, every] = (repeat || 'month:1').split(':');
+            return run(() => onSaveRecurring({
+                id: recurring?.id || newId(),
+                kind,
+                account_id: accountId,
+                to_account_id: transfer ? toAccountId : null,
+                amount: abs,
+                counterparty,
+                category: transfer ? 'Umbuchung' : shownCategory,
+                purpose,
+                interval,
+                every: Number(every),
+                start_date: date,
+                end_date: endDate || null,
+            }));
         }
+
+        if (transfer) {
+            const tid = entry?.transfer?.from.transfer_id || newId();
+            const shared = { booking_date: date, counterparty: counterparty || 'Umbuchung', purpose, category: 'Umbuchung', transfer_id: tid, recurring_id: entry?.recurring_id || null };
+            return run(() => onSaveTransactions([
+                { ...shared, id: entry?.transfer?.from.id || `${tid}-out`, account_id: accountId, amount: -abs },
+                { ...shared, id: entry?.transfer?.to.id || `${tid}-in`, account_id: toAccountId, amount: abs },
+            ]));
+        }
+
+        return run(() => onSaveTransactions([{
+            id: entry?.id || newId(),
+            account_id: accountId,
+            booking_date: date,
+            amount: kind === 'out' ? -abs : abs,
+            counterparty,
+            purpose,
+            category: shownCategory,
+            recurring_id: entry?.recurring_id || null,
+        }]));
     }
+
+    function remove() {
+        if (!confirmDelete) return setConfirmDelete(true);
+        if (isRecurring) return run(() => onDeleteRecurring(recurring.id));
+        return run(() => onDeleteTransaction(entry.transfer ? { transfer_id: entry.transfer.from.transfer_id } : { id: entry.id }));
+    }
+
+    const accountSelect = (value, onChange, exclude) => (
+        <select value={value} onChange={(e) => onChange(e.target.value)} className={`${inputClass} min-h-12 appearance-none`}>
+            {accounts.filter((a) => a.id !== exclude).map((a) => <option key={a.id} value={a.id}>{a.name}</option>)}
+        </select>
+    );
 
     return (
-        <Sheet title={editing ? 'Umsatz bearbeiten' : 'Neuer Umsatz'} onClose={onClose}>
+        <Sheet title={title} onClose={onClose}>
             <form onSubmit={save} className="space-y-4 pb-4">
-                {!editing && templates.length > 0 && (
+                {!editing && !isRecurring && templates.length > 0 && (
                     <div className="flex flex-wrap gap-2">
                         {templates.map((t) => (
                             <button
                                 key={`${t.counterparty}|${t.amount}`}
                                 type="button"
                                 onClick={() => applyTemplate(t)}
-                                className="flex items-center gap-1.5 rounded-full border border-line bg-card py-1.5 pr-3 pl-2.5 text-sm active:scale-95 transition-transform"
+                                className="flex items-center gap-1.5 rounded-full border border-line bg-card py-1.5 pr-3 pl-2.5 text-sm transition-transform active:scale-95"
                             >
                                 <Zap size={13} className="text-muted" />
                                 {t.counterparty}
-                                <span className={`tabular ${t.amount > 0 ? 'text-income' : 'text-muted'}`}>{Number.isInteger(t.amount) ? moneyShort(Math.abs(t.amount)) : money(Math.abs(t.amount))}</span>
+                                <span className={`tabular ${t.amount > 0 ? 'text-income' : 'text-muted'}`}>
+                                    {Number.isInteger(t.amount) ? moneyShort(Math.abs(t.amount)) : money(Math.abs(t.amount))}
+                                </span>
                             </button>
                         ))}
                     </div>
                 )}
 
-                <div className="grid grid-cols-2 rounded-full border border-line bg-card p-1">
-                    {[['out', 'Ausgabe', 'bg-expense'], ['in', 'Einnahme', 'bg-income']].map(([k, label, bg]) => (
+                <div className="grid grid-cols-3 rounded-full border border-line bg-card p-1">
+                    {KINDS.map(([k, label, active]) => (
                         <button
                             key={k}
                             type="button"
+                            disabled={kindLocked(k)}
                             onClick={() => { setKind(k); setCategory(null); }}
-                            className={`rounded-full py-2 text-sm font-medium transition-colors ${kind === k ? `${bg} text-white` : 'text-muted'}`}
+                            className={`rounded-full py-2 text-sm font-medium transition-colors disabled:opacity-30 ${kind === k ? active : 'text-muted'}`}
                         >
                             {label}
                         </button>
@@ -102,7 +159,7 @@ export default function TransactionSheet({ transaction, accounts, lastAccountId,
                 </div>
 
                 <div className="flex items-baseline justify-center gap-2 py-2">
-                    <span className={`text-4xl font-semibold ${kind === 'out' ? 'text-expense' : 'text-income'}`}>{kind === 'out' ? '−' : '+'}</span>
+                    {!transfer && <span className={`text-4xl font-semibold ${kind === 'out' ? 'text-expense' : 'text-income'}`}>{kind === 'out' ? '−' : '+'}</span>}
                     <input
                         autoFocus={!editing}
                         inputMode="decimal"
@@ -115,49 +172,78 @@ export default function TransactionSheet({ transaction, accounts, lastAccountId,
                     <span className="text-2xl text-muted">€</span>
                 </div>
 
-                <Field label={kind === 'out' ? 'Wo / an wen' : 'Von wem'}>
-                    <input
-                        list="counterparties"
-                        value={counterparty}
-                        onChange={(e) => setCounterparty(e.target.value)}
-                        placeholder={kind === 'out' ? 'z. B. REWE' : 'z. B. Arbeitgeber'}
-                        className={inputClass}
-                    />
-                    <datalist id="counterparties">
-                        {counterparties.map((c) => <option key={c} value={c} />)}
-                    </datalist>
-                </Field>
-
-                <Field label="Kategorie">
-                    <div className="flex flex-wrap gap-2">
-                        {options.map((c) => (
-                            <button
-                                key={c}
-                                type="button"
-                                onClick={() => setCategory(c)}
-                                className={`rounded-full border px-3 py-1.5 text-sm ${shownCategory === c ? 'border-ink bg-ink text-paper' : 'border-line bg-card'}`}
-                            >
-                                {c}
-                            </button>
-                        ))}
+                {transfer ? (
+                    <div className="space-y-1">
+                        <Field label="Von">{accountSelect(accountId, (v) => { setAccountId(v); if (v === toAccountId) setToAccountId(accounts.find((a) => a.id !== v)?.id); })}</Field>
+                        <div className="flex justify-center"><ArrowDown size={18} className="text-muted" /></div>
+                        <Field label="Nach">{accountSelect(toAccountId, setToAccountId, accountId)}</Field>
+                        {accounts.length < 2 && <p className="px-1 text-xs text-expense">Für eine Umbuchung brauchst du mindestens zwei Konten.</p>}
                     </div>
-                </Field>
+                ) : (
+                    <>
+                        <Field label={kind === 'out' ? 'Wo / an wen' : 'Von wem'}>
+                            <input
+                                list="counterparties"
+                                value={counterparty}
+                                onChange={(e) => setCounterparty(e.target.value)}
+                                placeholder={kind === 'out' ? 'z. B. REWE' : 'z. B. Arbeitgeber'}
+                                className={inputClass}
+                            />
+                            <datalist id="counterparties">
+                                {counterparties.map((c) => <option key={c} value={c} />)}
+                            </datalist>
+                        </Field>
 
-                <div className={`grid gap-3 ${accounts.length > 1 ? 'grid-cols-2' : ''}`}>
-                    <Field label="Datum">
+                        <Field label="Kategorie">
+                            <div className="flex flex-wrap gap-2">
+                                {optionsFor(kind).filter((c) => c !== 'Umbuchung').map((c) => (
+                                    <button
+                                        key={c}
+                                        type="button"
+                                        onClick={() => setCategory(c)}
+                                        className={`rounded-full border px-3 py-1.5 text-sm ${shownCategory === c ? 'border-ink bg-ink text-paper' : 'border-line bg-card'}`}
+                                    >
+                                        {c}
+                                    </button>
+                                ))}
+                            </div>
+                        </Field>
+                    </>
+                )}
+
+                <div className={`grid gap-3 ${!transfer && accounts.length > 1 ? 'grid-cols-2' : ''}`}>
+                    <Field label={isRecurring || repeat ? 'Erste Ausführung' : 'Datum'}>
                         <input type="date" value={date} onChange={(e) => setDate(e.target.value)} className={`${inputClass} min-h-12`} />
                     </Field>
-                    {accounts.length > 1 && (
-                        <Field label="Konto">
-                            <select value={accountId} onChange={(e) => setAccountId(e.target.value)} className={`${inputClass} min-h-12 appearance-none`}>
-                                {accounts.map((a) => <option key={a.id} value={a.id}>{a.name}</option>)}
-                            </select>
-                        </Field>
-                    )}
+                    {!transfer && accounts.length > 1 && <Field label="Konto">{accountSelect(accountId, setAccountId)}</Field>}
                 </div>
 
-                <Field label="Notiz (optional)">
-                    <input value={purpose} onChange={(e) => setPurpose(e.target.value)} placeholder="Verwendungszweck" className={inputClass} />
+                {(isRecurring || !editing) && (
+                    <div className={`grid gap-3 ${repeat ? 'grid-cols-2' : ''}`}>
+                        <Field label="Wiederholen">
+                            <select value={repeat} onChange={(e) => setRepeat(e.target.value)} className={`${inputClass} min-h-12 appearance-none`}>
+                                {!isRecurring && <option value="">Nie</option>}
+                                {REPEATS.map(([v, label]) => <option key={v} value={v}>{label}</option>)}
+                            </select>
+                        </Field>
+                        {repeat && (
+                            <Field label="Ende (optional)">
+                                <input type="date" value={endDate} min={date} onChange={(e) => setEndDate(e.target.value)} className={`${inputClass} min-h-12`} />
+                            </Field>
+                        )}
+                    </div>
+                )}
+                {repeat && !isRecurring && (
+                    <p className="-mt-2 flex items-center gap-1.5 px-1 text-xs text-muted">
+                        <Repeat size={12} /> Wird als Dauerauftrag gespeichert und automatisch gebucht.
+                    </p>
+                )}
+                {entry?.recurring_id && <p className="flex items-center gap-1.5 px-1 text-xs text-muted"><Repeat size={12} /> Von einem Dauerauftrag gebucht.</p>}
+
+                <Field label={transfer ? 'Bezeichnung (optional)' : 'Notiz (optional)'}>
+                    {transfer
+                        ? <input value={counterparty} onChange={(e) => setCounterparty(e.target.value)} placeholder="z. B. Sparen" className={inputClass} />
+                        : <input value={purpose} onChange={(e) => setPurpose(e.target.value)} placeholder="Verwendungszweck" className={inputClass} />}
                 </Field>
 
                 {error && <p className="text-sm text-expense">{error}</p>}
@@ -170,7 +256,7 @@ export default function TransactionSheet({ transaction, accounts, lastAccountId,
                             disabled={busy}
                             className={`flex items-center justify-center gap-2 rounded-full border px-5 py-3 text-sm font-medium ${confirmDelete ? 'border-expense bg-expense text-white' : 'border-line bg-card text-expense'}`}
                         >
-                            <Trash2 size={16} />{confirmDelete ? 'Wirklich?' : ''}
+                            <Trash2 size={16} />{confirmDelete ? (isRecurring ? 'Beenden?' : 'Wirklich?') : ''}
                         </button>
                     )}
                     <button disabled={busy || !valid} className="flex-1 rounded-full bg-ink py-3 font-medium text-paper disabled:opacity-40">
