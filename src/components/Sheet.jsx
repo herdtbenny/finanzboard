@@ -35,12 +35,16 @@ export default function Sheet({ title, onClose, children }) {
     );
 }
 
-export function Field({ label, children }) {
+// A labelled form field. `group` for fields made of buttons (pickers,
+// toggles): a <label> would forward every click inside it — even into the
+// gaps — to its first button.
+export function Field({ label, group, children }) {
+    const Tag = group ? 'div' : 'label';
     return (
-        <label className="block">
+        <Tag className="block" {...(group ? { role: 'group', 'aria-label': label } : {})}>
             <span className="mb-1 block px-1 text-xs font-medium text-muted">{label}</span>
             {children}
-        </label>
+        </Tag>
     );
 }
 

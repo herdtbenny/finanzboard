@@ -176,7 +176,7 @@ export function AccountSheet({ account, count, onSave, onDelete, onClose }) {
                 <Field label="Name">
                     <input autoFocus={!account.id} value={name} onChange={(e) => setName(e.target.value)} placeholder="z. B. VR Giro" className={inputClass} />
                 </Field>
-                <Field label="Art">
+                <Field label="Art" group>
                     <div className="grid grid-cols-2 rounded-full border border-line bg-card p-1">
                         {[['cash', 'Konto'], ['depot', 'Depot']].map(([k, label]) => (
                             <button key={k} type="button" onClick={() => setKind(k)} className={`rounded-full py-2 text-sm font-medium ${kind === k ? 'bg-ink text-paper' : 'text-muted'}`}>
@@ -190,7 +190,7 @@ export function AccountSheet({ account, count, onSave, onDelete, onClose }) {
                         </span>
                     )}
                 </Field>
-                <Field label="Anfangssaldo">
+                <Field label="Anfangssaldo" group>
                     <div className="flex gap-2">
                         <button type="button" onClick={() => setNegative(!negative)} aria-label="Vorzeichen wechseln" className="w-12 shrink-0 rounded-full border border-line bg-card text-lg font-semibold">
                             {negative ? '−' : '+'}

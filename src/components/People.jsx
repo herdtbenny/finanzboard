@@ -204,7 +204,7 @@ function SpaceSheet({ space, users, onAct, onClose }) {
                 <Field label="Name">
                     <input autoFocus={!space.id} value={name} onChange={(e) => setName(e.target.value)} placeholder="z. B. Eltern gemeinsam" className={inputClass} />
                 </Field>
-                <Field label="Wer hat Zugriff">
+                <Field label="Wer hat Zugriff" group>
                     <div className="flex flex-wrap gap-2">
                         {users.map((u) => (
                             <button

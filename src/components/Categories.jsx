@@ -79,7 +79,7 @@ function CategorySheet({ category, onSave, onDelete, onClose }) {
                 <Field label="Name">
                     <input autoFocus={isNew} maxLength={30} value={name} onChange={(e) => setName(e.target.value)} placeholder="z. B. Haustier" className={inputClass} />
                 </Field>
-                <Field label="Art">
+                <Field label="Art" group>
                     <div className="grid grid-cols-2 rounded-full border border-line bg-card p-1">
                         {[['out', 'Ausgabe', 'bg-expense text-white'], ['in', 'Einnahme', 'bg-income text-white']].map(([k, label, active]) => (
                             <button key={k} type="button" onClick={() => setKind(k)} className={`rounded-full py-2 text-sm font-medium ${kind === k ? active : 'text-muted'}`}>
@@ -88,7 +88,7 @@ function CategorySheet({ category, onSave, onDelete, onClose }) {
                         ))}
                     </div>
                 </Field>
-                <Field label="Icon">
+                <Field label="Icon" group>
                     <div className="grid grid-cols-7 gap-2 sm:grid-cols-10">
                         {Object.entries(ICON_SET).map(([key, Icon]) => (
                             <button

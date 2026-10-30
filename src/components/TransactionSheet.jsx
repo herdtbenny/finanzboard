@@ -185,7 +185,7 @@ export default function TransactionSheet({
                             </datalist>
                         </Field>
 
-                        <Field label="Kategorie">
+                        <Field label="Kategorie" group>
                             <CategoryPicker
                                 options={optionsFor(kind).filter((c) => !NEUTRAL_CATEGORIES.includes(c))}
                                 value={shownCategory}
