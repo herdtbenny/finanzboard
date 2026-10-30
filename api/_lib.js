@@ -69,10 +69,14 @@ function ebToken() {
     return `${body}.${sig}`;
 }
 
-export async function eb(path, { method = 'GET', body } = {}) {
+// `psu` = the user's own IP and browser. Sending them marks a request as made
+// while the user is present, which PSD2 doesn't count towards the limit of
+// 4 unattended reads per account and day.
+export async function eb(path, { method = 'GET', body, psu } = {}) {
+    const psuHeaders = psu ? { 'Psu-Ip-Address': psu.ip, 'Psu-User-Agent': psu.userAgent } : {};
     const res = await fetch(EB_API + path, {
         method,
-        headers: { Authorization: `Bearer ${ebToken()}`, 'Content-Type': 'application/json' },
+        headers: { Authorization: `Bearer ${ebToken()}`, 'Content-Type': 'application/json', ...psuHeaders },
         body: body ? JSON.stringify(body) : undefined,
     });
     const text = await res.text();
@@ -115,13 +119,13 @@ function toRow(accountUid, t) {
     };
 }
 
-async function fetchTransactions(uid, dateFrom) {
+async function fetchTransactions(uid, dateFrom, psu) {
     const all = [];
     let key;
     do {
         const qs = new URLSearchParams({ date_from: dateFrom });
         if (key) qs.set('continuation_key', key);
-        const page = await eb(`/accounts/${uid}/transactions?${qs}`);
+        const page = await eb(`/accounts/${uid}/transactions?${qs}`, { psu });
         all.push(...(page.transactions || []));
         key = page.continuation_key;
     } while (key);
@@ -135,7 +139,7 @@ function isoDate(d) {
 // Pulls balances and transactions for every account whose consent is still
 // valid. `initialDays` is how far back to go for an account that has no
 // transactions yet; later runs only re-read the last 10 days.
-export async function syncAll({ initialDays = 90 } = {}) {
+export async function syncAll({ initialDays = 90, psu } = {}) {
     const db = getSupabase();
     if (!db) throw new Error('Supabase ist nicht konfiguriert.');
 
@@ -148,7 +152,7 @@ export async function syncAll({ initialDays = 90 } = {}) {
 
     let count = 0;
     for (const { uid } of accounts) {
-        const { balances } = await eb(`/accounts/${uid}/balances`);
+        const { balances } = await eb(`/accounts/${uid}/balances`, { psu });
         const bal = pickBalance(balances);
         await db.from('accounts').update({
             balance: bal ? Number(bal.balance_amount.amount) : null,
@@ -162,7 +166,7 @@ export async function syncAll({ initialDays = 90 } = {}) {
         if (last?.length) from.setTime(new Date(last[0].booking_date).getTime() - 10 * 86400000);
         else from.setDate(from.getDate() - initialDays);
 
-        const rows = (await fetchTransactions(uid, isoDate(from))).filter((t) => t.booking_date || t.value_date).map((t) => toRow(uid, t));
+        const rows = (await fetchTransactions(uid, isoDate(from), psu)).filter((t) => t.booking_date || t.value_date).map((t) => toRow(uid, t));
         // Pending entries have no stable id and turn into booked ones later,
         // so they are replaced wholesale on every run.
         await db.from('transactions').delete().eq('account_uid', uid).eq('status', 'PDNG');
@@ -174,6 +178,18 @@ export async function syncAll({ initialDays = 90 } = {}) {
         count += unique.length;
     }
     return { accounts: accounts.length, transactions: count };
+}
+
+export function psuFrom(req) {
+    const ip = String(req.headers['x-forwarded-for'] || '').split(',')[0].trim() || req.socket?.remoteAddress || '';
+    return { ip, userAgent: req.headers['user-agent'] || '' };
+}
+
+export async function lastSuccessfulSync() {
+    const db = getSupabase();
+    if (!db) return null;
+    const { data } = await db.from('sync_log').select('at').eq('ok', true).order('at', { ascending: false }).limit(1);
+    return data?.[0]?.at ? new Date(data[0].at) : null;
 }
 
 export async function logSync(ok, message) {

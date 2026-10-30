@@ -1,4 +1,4 @@
-import { checkState, eb, getSupabase, logSync, syncAll } from './_lib.js';
+import { checkState, eb, getSupabase, logSync, psuFrom, syncAll } from './_lib.js';
 
 // The bank sends the browser back here after the login + TAN. We trade the
 // code for a session, store its accounts and run a first, deeper sync.
@@ -39,7 +39,7 @@ export default async function handler(req, res) {
         if (aErr) throw aErr;
 
         // Right after the TAN most banks hand out more history than later on.
-        const result = await syncAll({ initialDays: 365 });
+        const result = await syncAll({ initialDays: 365, psu: psuFrom(req) });
         await logSync(true, `Verbunden: ${bank}, ${result.transactions} Umsätze`);
         back({ connected: bank });
     } catch (e) {

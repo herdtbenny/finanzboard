@@ -34,24 +34,38 @@ export default function Dashboard({ token, onLogout }) {
     }, [onLogout]);
 
     const load = useCallback(() => guard(async () => {
-        setData(await api('data', token));
+        const d = await api('data', token);
+        setData(d);
         setError('');
+        return d;
     }), [guard, token]);
 
-    useEffect(() => {
-        load();
-        if (window.location.search) window.history.replaceState(null, '', '/');
-    }, [load]);
-
-    async function sync() {
+    // `auto`: opening the app or bringing it back to the foreground. Shows the
+    // stored data right away, then fetches fresh transactions from the bank
+    // (the server skips that if the last fetch is under 5 minutes old). Errors
+    // of an automatic fetch only show up in the "Aktualisiert" line.
+    const sync = useCallback(async ({ auto = false } = {}) => {
         setSyncing(true);
-        await guard(async () => {
-            const r = await api('sync', token, { method: 'POST' });
-            setNotice(r.note || `${r.transactions} Umsätze aktualisiert`);
-            await load();
-        });
+        try {
+            const r = await api('sync', token, { method: 'POST', body: { auto } });
+            if (!auto) setNotice(r.note || `${r.transactions} Umsätze aktualisiert`);
+            if (!r.skipped) await load();
+        } catch (e) {
+            if (e instanceof Unauthorized) onLogout();
+            else if (auto) await load();
+            else setError(e.message);
+        }
         setSyncing(false);
-    }
+    }, [token, load, onLogout]);
+
+    useEffect(() => {
+        load().then((d) => { if (d?.accounts.length) sync({ auto: true }); });
+        if (window.location.search) window.history.replaceState(null, '', '/');
+
+        const onVisible = () => { if (document.visibilityState === 'visible') sync({ auto: true }); };
+        document.addEventListener('visibilitychange', onVisible);
+        return () => document.removeEventListener('visibilitychange', onVisible);
+    }, [load, sync]);
 
     const transactions = useMemo(
         () => (data?.transactions || []).map((t) => ({ ...t, amount: Number(t.amount), category: categorize(t) })),
@@ -77,7 +91,7 @@ export default function Dashboard({ token, onLogout }) {
                 <h1 className="text-lg font-semibold">Finanzen</h1>
                 <div className="flex gap-2">
                     <button
-                        onClick={sync}
+                        onClick={() => sync()}
                         disabled={syncing || noBank}
                         aria-label="Jetzt synchronisieren"
                         className="flex size-10 items-center justify-center rounded-full border border-line bg-card disabled:opacity-40"
@@ -139,8 +153,8 @@ export default function Dashboard({ token, onLogout }) {
                             <p className="tabular text-4xl font-semibold tracking-tight">{money(total)}</p>
                             {data.lastSync && (
                                 <p className="mt-1 text-xs text-muted">
-                                    Aktualisiert {relative(data.lastSync.at)}
-                                    {!data.lastSync.ok && <span className="text-expense"> · letzter Abruf fehlgeschlagen</span>}
+                                    {syncing ? 'Aktualisiere …' : `Aktualisiert ${relative(data.lastSync.at)}`}
+                                    {!syncing && !data.lastSync.ok && <span className="text-expense"> · letzter Abruf fehlgeschlagen</span>}
                                 </p>
                             )}
                             <div className="no-scrollbar -mx-4 mt-4 flex snap-x scroll-px-4 gap-3 overflow-x-auto px-4">

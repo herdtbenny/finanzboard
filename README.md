@@ -59,13 +59,18 @@ Bank ──PSD2──▶ Enable Banking ──REST──▶ /api/sync (Vercel-Cr
 4. iPhone: Teilen → „Zum Home-Bildschirm“. Android: Menü → „App installieren“.
 
 ## Automatisierung im Betrieb
-- **Täglich 05:00 UTC** ruft der Vercel-Cron `/api/sync` auf und holt Saldo und neue Umsätze
-  (die letzten 10 Tage werden jeweils neu gelesen, Duplikate werden erkannt).
-- Der 🔄-Button oben holt sofort neu. PSD2 erlaubt ohne dich ca. 4 Abrufe pro Tag und Konto.
+- **Beim Öffnen der App** (und wenn sie aus dem Hintergrund zurückkommt) werden sofort die
+  gespeicherten Daten gezeigt und parallel frische Umsätze von der Bank geholt. Liegt der letzte
+  Abruf unter 5 Minuten zurück, wird übersprungen. Die App schickt dabei deine IP und deinen
+  Browser mit (`Psu-Ip-Address` / `Psu-User-Agent`), damit die Bank den Abruf als „von dir
+  ausgelöst“ wertet. Solche Abrufe fallen nicht unter das PSD2-Limit von 4 Hintergrund-Abrufen pro Tag.
+- Der 🔄-Button holt jederzeit sofort neu.
+- **Zusätzlich 1× täglich (05:00 UTC)** läuft der Vercel-Cron `/api/sync`, damit die Daten auch
+  ohne Öffnen nicht veralten und das kostenlose Supabase-Projekt aktiv bleibt.
+- Pro Abruf werden die letzten 10 Tage neu gelesen, Duplikate werden erkannt.
 - **Freigabe erneuern:** Die Bank-Freigabe gilt je nach Bank 90–180 Tage. 14 Tage vorher
   erscheint im Dashboard ein Hinweis, „Erneuern“ wiederholt Schritt 4.2. Das ist gesetzlich
   vorgeschrieben und gilt für jede App.
-- Der tägliche Abruf hält gleichzeitig das kostenlose Supabase-Projekt aktiv.
 
 ## Lokal entwickeln
 ```bash
