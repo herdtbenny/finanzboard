@@ -7,9 +7,9 @@ import { isNeutral, isRefund } from '../shared/categories.js';
 import { monthKey } from '../shared/format.js';
 import { Bar, Card, MonthSwitch } from './ui.jsx';
 
-// The chosen month in one card: what was saved (with the savings rate as a
-// ring), income against expenses, the comparison with last month and with
-// the six months before, and the biggest expense categories.
+// The chosen month in one card: income against expenses and what was saved
+// (with the savings rate), the comparison with last month and with the six
+// months before, and the biggest expense categories.
 export default function MonthCard({ transactions, month, onMonth, onAll }) {
     const summary = monthSummary(transactions, month);
     const prevKey = shiftMonth(month, -1);
@@ -40,31 +40,29 @@ export default function MonthCard({ transactions, month, onMonth, onAll }) {
                 <MonthSwitch month={month} onChange={onMonth} />
             </div>
 
-            {/* Headline: saved this month */}
-            <div className="flex items-center gap-4 rounded-[22px] bg-ink/[0.04] p-4">
-                <Ring rate={summary.rate} negative={summary.net < 0} />
-                <div className="min-w-0">
-                    <p className="text-xs text-muted">Gespart</p>
-                    <p className={`tabular truncate text-[26px] leading-tight font-semibold tracking-tight ${summary.net < 0 ? 'text-expense' : ''}`}>
-                        {summary.net >= 0 ? '+' : ''}{money(summary.net)}
-                    </p>
-                    {Math.abs(valueChange) > 0.005 && (
-                        <p className="tabular truncate text-xs text-muted">
-                            Depot {valueChange >= 0 ? '+' : ''}{money(valueChange)} → Vermögen {summary.net + valueChange >= 0 ? '+' : ''}{money(summary.net + valueChange)}
-                        </p>
-                    )}
-                </div>
+            {/* Income − expenses = saved */}
+            <div className="space-y-2.5">
+                <Flow label="Einnahmen" count={nIn} value={summary.in} share={summary.in / scale} tone="bg-income" />
+                <Flow label="Ausgaben" count={nOut} value={summary.out} share={summary.out / scale} tone="bg-expense" />
             </div>
+            <div className="mt-3 flex items-baseline justify-between gap-3 rounded-2xl bg-ink/[0.04] px-4 py-2.5">
+                <span className="text-sm text-muted">Gespart</span>
+                <span className="tabular truncate text-right">
+                    <span className={`text-lg font-semibold ${summary.net < 0 ? 'text-expense' : 'text-income'}`}>
+                        {summary.net >= 0 ? '+' : ''}{money(summary.net)}
+                    </span>
+                    {summary.rate != null && summary.net >= 0 && <span className="ml-1.5 text-sm text-muted">· {Math.round(summary.rate * 100)} %</span>}
+                </span>
+            </div>
+            {Math.abs(valueChange) > 0.005 && (
+                <p className="tabular mt-1.5 px-1 text-xs text-muted">
+                    Depot {valueChange >= 0 ? '+' : ''}{money(valueChange)} → Vermögen {summary.net + valueChange >= 0 ? '+' : ''}{money(summary.net + valueChange)}
+                </p>
+            )}
 
             <p className="mt-3 px-1 text-sm leading-snug text-muted">
                 <Sentence summary={summary} prev={prev} prevName={prevName} usual={usual} />
             </p>
-
-            {/* Income against expenses */}
-            <div className="mt-4 space-y-2.5">
-                <Flow label="Einnahmen" count={nIn} value={summary.in} share={summary.in / scale} tone="bg-income" />
-                <Flow label="Ausgaben" count={nOut} value={summary.out} share={summary.out / scale} tone="bg-expense" />
-            </div>
 
             {/* Compared with last month and the usual month */}
             {(prev != null || usual != null) && (
@@ -106,7 +104,7 @@ export default function MonthCard({ transactions, month, onMonth, onAll }) {
             {explain && (
                 <ul className="mt-2 list-disc space-y-1 pl-4 text-xs leading-snug text-muted">
                     <li><b className="font-medium text-ink">Gespart</b> = Einnahmen − Ausgaben. Investiertes Geld gilt als gespart.</li>
-                    <li><b className="font-medium text-ink">behalten</b> (Ring) = welcher Anteil deiner Einnahmen übrig blieb, die Sparquote.</li>
+                    <li><b className="font-medium text-ink">%</b> hinter Gespart = welcher Anteil deiner Einnahmen übrig blieb, die Sparquote.</li>
                     <li><b className="font-medium text-ink">Ausgaben</b> nach Abzug von Erstattungen (z. B. Anteile von Freunden, Rückzahlungen).</li>
                     <li>Umbuchungen zwischen deinen Konten, Investieren, Kontostand-Korrekturen und Depot-Kursänderungen zählen weder als Einnahme noch als Ausgabe.</li>
                     <li>Die Vergleiche zeigen, wie viel mehr oder weniger du gespart hast als im Vormonat bzw. im Schnitt der 6 Monate davor.</li>
@@ -135,29 +133,6 @@ function Sentence({ summary, prev, prevName, usual }) {
         return `${parts[0]} – ${vs[0]}, ${sameDirection ? 'und' : 'aber'} ${vs[1]}.`;
     }
     return `${parts[0]}${vs.length ? ` – ${vs[0]}` : ''}.`;
-}
-
-// Savings rate as a ring; empty when nothing was saved.
-function Ring({ rate, negative }) {
-    const r = 30;
-    const c = 2 * Math.PI * r;
-    const share = rate == null || negative ? 0 : Math.min(1, Math.max(0, rate));
-    return (
-        <div className="relative size-[76px] shrink-0">
-            <svg viewBox="0 0 76 76" className="size-full -rotate-90">
-                <circle cx="38" cy="38" r={r} fill="none" strokeWidth="7" className="stroke-ink/10" />
-                <circle
-                    cx="38" cy="38" r={r} fill="none" strokeWidth="7" strokeLinecap="round"
-                    className={negative ? 'stroke-expense' : 'stroke-income'}
-                    strokeDasharray={`${share * c} ${c}`}
-                />
-            </svg>
-            <span className="tabular absolute inset-0 flex flex-col items-center justify-center leading-none">
-                <span className="text-sm font-semibold">{rate == null ? '–' : `${Math.round(rate * 100)} %`}</span>
-                <span className="mt-0.5 text-[9px] text-muted">behalten</span>
-            </span>
-        </div>
-    );
 }
 
 function Flow({ label, count, value, share, tone }) {
