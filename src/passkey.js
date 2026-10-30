@@ -10,11 +10,12 @@ export async function registerFaceId(token) {
     await api('passkey?step=register-verify', token, { method: 'POST', body: { state, response } });
 }
 
-// Face ID instead of the password; resolves to the session token.
-export async function loginWithFaceId() {
-    const { options, state } = await api('passkey?step=login-options', '', { method: 'POST' });
+// Face ID instead of the password (the name is still needed); resolves to
+// the session token.
+export async function loginWithFaceId(name) {
+    const { options, state } = await api('passkey?step=login-options', '', { method: 'POST', body: { name } });
     const response = await startAuthentication({ optionsJSON: options });
-    const { token } = await api('passkey?step=login-verify', '', { method: 'POST', body: { state, response } });
+    const { token } = await api('passkey?step=login-verify', '', { method: 'POST', body: { name, state, response } });
     return token;
 }
 

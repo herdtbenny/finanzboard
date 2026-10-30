@@ -145,7 +145,6 @@ function PersonSheet({ person, me, onAct, onClose }) {
     const isNew = !person.id;
     const [name, setName] = useState(person.name || '');
     const [password, setPassword] = useState('');
-    const [admin, setAdmin] = useState(Boolean(person.is_admin));
     const [ownSpace, setOwnSpace] = useState(true);
     const [confirm, setConfirm] = useState(false);
     const [state, run] = useAction(onClose);
@@ -154,14 +153,14 @@ function PersonSheet({ person, me, onAct, onClose }) {
     function save(e) {
         e.preventDefault();
         run(() => onAct(isNew
-            ? { action: 'createUser', name, password, admin, ownSpace }
-            : { action: 'updateUser', id: person.id, name, password: password || undefined, admin }));
+            ? { action: 'createUser', name, password, ownSpace }
+            : { action: 'updateUser', id: person.id, name, password: password || undefined }));
     }
 
     return (
         <Sheet title={isNew ? 'Neue Person' : person.name} onClose={onClose}>
             <form onSubmit={save} className="space-y-4 pb-4">
-                <Field label="Name (zum Anmelden)">
+                <Field label="Benutzername (zum Anmelden)">
                     <input autoFocus={isNew} autoCapitalize="words" value={name} onChange={(e) => setName(e.target.value)} placeholder="z. B. Mama" className={inputClass} />
                 </Field>
                 <Field label={isNew ? 'Passwort (mind. 6 Zeichen)' : 'Neues Passwort (leer lassen = unverändert)'}>
@@ -170,7 +169,6 @@ function PersonSheet({ person, me, onAct, onClose }) {
                         <KeyRound size={16} className="pointer-events-none absolute top-1/2 right-4 -translate-y-1/2 text-muted" />
                     </div>
                 </Field>
-                <Toggle on={admin} disabled={self} onChange={setAdmin} label="Admin" hint="Darf Personen und Haushalte verwalten" />
                 {isNew && <Toggle on={ownSpace} onChange={setOwnSpace} label="Eigener Haushalt" hint="Legt einen privaten Haushalt mit dem Namen an" />}
 
                 {state.error && <p className="text-sm text-expense">{state.error}</p>}
@@ -241,9 +239,9 @@ function SpaceSheet({ space, users, onAct, onClose }) {
     );
 }
 
-function Toggle({ on, onChange, label, hint, disabled }) {
+function Toggle({ on, onChange, label, hint }) {
     return (
-        <button type="button" disabled={disabled} onClick={() => onChange(!on)} className="flex w-full items-center gap-3 rounded-2xl border border-line bg-card px-4 py-3 text-left disabled:opacity-50">
+        <button type="button" onClick={() => onChange(!on)} className="flex w-full items-center gap-3 rounded-2xl border border-line bg-card px-4 py-3 text-left">
             <div className="min-w-0 flex-1">
                 <p className="text-sm font-medium">{label}</p>
                 <p className="text-xs text-muted">{hint}</p>

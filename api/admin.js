@@ -4,8 +4,10 @@ import { hashPassword, session } from './_lib.js';
 // People and Haushalte, for admins only.
 // GET → { users, spaces } (each space with its member ids)
 // POST { action, … }:
-//   createUser { name, password, admin, ownSpace }   ownSpace: also create a Haushalt named after them
-//   updateUser { id, name?, password?, admin? }
+//   createUser { name, password, ownSpace }   ownSpace: also create a Haushalt named after them
+//   updateUser { id, name?, password? }
+// Only admins pick user names; people can't change their own. New people are
+// never admins (the first admin comes from scripts/setup-admin.js).
 //   deleteUser { id }
 //   saveSpace  { id?, name, members: [userId] }
 //   deleteSpace { id }   — deletes the Haushalt with all its data
@@ -41,7 +43,7 @@ export default async function handler(req, res) {
             if (!name || String(b.password || '').length < 6) return fail('Name und mindestens 6 Zeichen Passwort');
             if (await nameTaken(name)) return fail('Name ist schon vergeben');
             const id = crypto.randomUUID();
-            const { error } = await client.from('users').insert({ id, name, password_hash: hashPassword(b.password), is_admin: Boolean(b.admin) });
+            const { error } = await client.from('users').insert({ id, name, password_hash: hashPassword(b.password), is_admin: false });
             if (error) return fail(error.message, 500);
             if (b.ownSpace) {
                 const spaceId = crypto.randomUUID();
@@ -60,10 +62,6 @@ export default async function handler(req, res) {
             if (b.password) {
                 if (String(b.password).length < 6) return fail('Mindestens 6 Zeichen');
                 patch.password_hash = hashPassword(b.password);
-            }
-            if (b.admin != null) {
-                if (b.id === s.user.id && !b.admin) return fail('Du kannst dir die Admin-Rechte nicht selbst nehmen');
-                patch.is_admin = Boolean(b.admin);
             }
             const { error } = await client.from('users').update(patch).eq('id', b.id);
             return error ? fail(error.message, 500) : res.status(200).json({ ok: true });

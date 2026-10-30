@@ -1,12 +1,17 @@
 import { useState } from 'react';
 import { Lock, ScanFace } from 'lucide-react';
 import { api, lockEnabled } from '../api.js';
+
+const LAST_NAME = 'finanzboard-name';
+const lastName = () => { try { return localStorage.getItem(LAST_NAME) || ''; } catch { return ''; } };
+const rememberName = (n) => { try { localStorage.setItem(LAST_NAME, n.trim()); } catch { /* private mode */ } };
 import { faceIdError, faceIdSupported, loginWithFaceId } from '../passkey.js';
 
 export default function Login({ onLogin }) {
     const locked = lockEnabled();
     const faceId = faceIdSupported();
-    const [name, setName] = useState('');
+    // The name is always required; the last one used on this device is filled in.
+    const [name, setName] = useState(lastName);
     const [password, setPassword] = useState('');
     const [showPassword, setShowPassword] = useState(!(locked && faceId));
     const [error, setError] = useState('');
@@ -18,6 +23,7 @@ export default function Login({ onLogin }) {
         setError('');
         try {
             const { token } = await api('login', '', { method: 'POST', body: { name, password } });
+            rememberName(name);
             onLogin(token);
         } catch (err) {
             setError(err.message);
@@ -30,7 +36,9 @@ export default function Login({ onLogin }) {
         setBusy(true);
         setError('');
         try {
-            onLogin(await loginWithFaceId());
+            const token = await loginWithFaceId(name);
+            rememberName(name);
+            onLogin(token);
         } catch (err) {
             setError(faceIdError(err));
         } finally {
@@ -46,10 +54,20 @@ export default function Login({ onLogin }) {
                 </div>
                 <h1 className="text-center text-2xl font-semibold tracking-tight">Finanzen</h1>
 
+                <input
+                    autoFocus={!name}
+                    autoComplete="username"
+                    autoCapitalize="none"
+                    placeholder="Benutzername"
+                    value={name}
+                    onChange={(e) => setName(e.target.value)}
+                    className="w-full rounded-full border border-line bg-card px-5 py-3.5 text-base outline-none focus:border-ink"
+                />
+
                 {faceId && (
                     <button
                         onClick={unlock}
-                        disabled={busy}
+                        disabled={busy || !name.trim()}
                         className={`flex w-full items-center justify-center gap-2 rounded-full py-3.5 font-medium disabled:opacity-40 ${showPassword ? 'border border-line bg-card' : 'bg-ink text-paper'}`}
                     >
                         <ScanFace size={20} /> Mit Face ID entsperren
@@ -59,16 +77,8 @@ export default function Login({ onLogin }) {
                 {showPassword ? (
                     <form onSubmit={submit} className="space-y-3">
                         <input
-                            autoFocus={!faceId}
-                            autoComplete="username"
-                            autoCapitalize="none"
-                            placeholder="Name"
-                            value={name}
-                            onChange={(e) => setName(e.target.value)}
-                            className="w-full rounded-full border border-line bg-card px-5 py-3.5 text-base outline-none focus:border-ink"
-                        />
-                        <input
                             type="password"
+                            autoFocus={Boolean(name) && !faceId}
                             autoComplete="current-password"
                             placeholder="Passwort"
                             value={password}

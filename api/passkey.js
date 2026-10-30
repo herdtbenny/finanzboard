@@ -8,8 +8,8 @@ import { getSupabase, makeToken, session } from './_lib.js';
 // Face ID / Touch ID login via WebAuthn passkeys. POST ?step=…
 //   register-options / register-verify — adds this device for the signed-in person
 //   login-options / login-verify       — answers with that person's session token
-// Passkeys are discoverable: the device itself offers the right person, so
-// logging in needs no name.
+// Logging in always takes the name: only that person's passkeys are offered,
+// and the answer must come from one of them.
 // The challenge travels to the browser and back inside a signed, 5-minute
 // `state`, so nothing has to be stored between the two calls.
 
@@ -84,16 +84,29 @@ export default async function handler(req, res) {
             return res.status(200).json({ ok: true });
         }
 
+        const findKeys = async () => {
+            const { data: user } = await client.from('users').select('id').ilike('name', String(req.body?.name || '').trim()).maybeSingle();
+            const { data } = user ? await client.from('passkeys').select('*').eq('user_id', user.id) : { data: [] };
+            return data || [];
+        };
+
         if (step === 'login-options') {
-            const options = await generateAuthenticationOptions({ rpID, userVerification: 'required' });
+            const keys = await findKeys();
+            // Same answer for unknown names and people without Face ID.
+            if (!keys.length) return res.status(404).json({ error: 'Für diesen Namen ist Face ID nicht eingerichtet' });
+            const options = await generateAuthenticationOptions({
+                rpID,
+                allowCredentials: keys.map((k) => ({ id: k.id, transports: k.transports?.split(',') })),
+                userVerification: 'required',
+            });
             return res.status(200).json({ options, state: makeState(options.challenge) });
         }
 
         if (step === 'login-verify') {
             const challenge = readState(req.body.state);
             if (!challenge) return res.status(400).json({ error: 'Zeit abgelaufen, bitte nochmal' });
-            const { data: key } = await client.from('passkeys').select('*').eq('id', String(req.body.response?.id || '')).maybeSingle();
-            if (!key?.user_id) return res.status(401).json({ error: 'Face ID ist auf diesem Gerät nicht eingerichtet' });
+            const key = (await findKeys()).find((k) => k.id === req.body.response?.id);
+            if (!key) return res.status(401).json({ error: 'Face ID passt nicht zu diesem Namen' });
             const result = await verifyAuthenticationResponse({
                 response: req.body.response,
                 expectedChallenge: challenge,
