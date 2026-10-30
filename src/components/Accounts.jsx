@@ -4,7 +4,7 @@ import { lockEnabled, setLock } from '../api.js';
 import { faceIdError, faceIdSupported, registerFaceId } from '../passkey.js';
 import { CategoryIcon } from '../shared/categoryIcons.jsx';
 import { repeatLabel, nextDate } from '../shared/repeat.js';
-import { amountInput, dayLabel, money, newId, parseAmount } from '../shared/format.js';
+import { amountInput, money, newId, parseAmount } from '../shared/format.js';
 import { exportCsv } from '../shared/exportCsv.js';
 import Sheet, { Field, inputClass } from './Sheet.jsx';
 import { Card, CardHeader, PageTitle } from './ui.jsx';
@@ -68,6 +68,8 @@ export default function Accounts({ token, accounts, balances, transactions, recu
     );
 }
 
+const shortDate = (iso) => new Date(`${iso}T00:00:00`).toLocaleDateString('de-DE', { day: 'numeric', month: 'short' });
+
 // Standing orders with their rhythm and next booking date.
 function Recurrings({ recurrings, accounts, onOpen }) {
     const names = Object.fromEntries(accounts.map((a) => [a.id, a.name]));
@@ -93,7 +95,7 @@ function Recurrings({ recurrings, accounts, onOpen }) {
                                 <p className="truncate text-[15px] font-medium">{r.counterparty || (r.kind === 'transfer' ? 'Umbuchung' : r.category)}</p>
                                 <p className="flex items-center gap-1 truncate text-xs text-muted">
                                     <Repeat size={11} className="shrink-0" />
-                                    {repeatLabel(r)} · {r.next ? `nächste ${dayLabel(r.next)}` : 'beendet'}
+                                    {repeatLabel(r)} · {r.next ? `ab ${shortDate(r.next)}` : 'beendet'}
                                     {r.kind === 'transfer' && ` · ${names[r.account_id]} → ${names[r.to_account_id]}`}
                                 </p>
                             </div>

@@ -1,4 +1,4 @@
-import { nextOccurrence, today } from '../../api/_recurring.js';
+import { nextOccurrence, today } from './schedule.js';
 
 export const REPEATS = [
     ['week:1', 'Wöchentlich'],
