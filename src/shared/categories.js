@@ -83,14 +83,16 @@ export function categoryMemory(transactions) {
     return Object.fromEntries(Object.entries(counts).map(([k, c]) => [k, Object.entries(c).sort((a, b) => b[1] - a[1])[0][0]]));
 }
 
-// Categories for the form: only those of that direction (expense or income,
-// own ones included), most used first.
+// Categories for the form, most used first. Expenses: only expense
+// categories. Income: the income categories, then the expense ones — money
+// back under an expense category is a refund and lowers that category.
 export function categoryOptions(transactions, kind) {
-    const list = kind === 'out' ? expenseCategories() : incomeCategories();
     const usage = {};
     for (const t of transactions) {
         if (isNeutral(t) || (kind === 'out') !== (t.amount < 0)) continue;
         usage[t.category] = (usage[t.category] || 0) + 1;
     }
-    return [...list].sort((a, b) => (usage[b] || 0) - (usage[a] || 0));
+    const byUse = (list) => [...list].sort((a, b) => (usage[b] || 0) - (usage[a] || 0));
+    if (kind === 'out') return byUse(expenseCategories());
+    return [...byUse(incomeCategories()), ...byUse(expenseCategories().filter((c) => !incomeCategories().includes(c)))];
 }
