@@ -8,19 +8,27 @@ import { MonthSwitch, PageTitle } from './ui.jsx';
 const PAGE = 80;
 
 // One line in a list. A merged transfer shows "from → to" and its amount
-// without sign.
+// without sign. In one account's statement a transfer shows as its half
+// (`t.whole` = the merged transfer): signed, with where the money went to
+// or came from; tapping it opens the whole transfer.
 export function TransactionRow({ t, onOpen, showDate, names }) {
-    const isTransfer = Boolean(t.transfer);
-    const title = isTransfer ? transferTitle(t) : t.counterparty || t.purpose || 'Unbekannt';
+    const whole = t.transfer ? t : t.whole;
+    const isTransfer = Boolean(whole);
+    const isHalf = Boolean(t.whole);
+    const title = isTransfer ? transferTitle(whole) : t.counterparty || t.purpose || 'Unbekannt';
+    let where = t.category;
+    if (isHalf) where = t.amount < 0 ? `→ an ${names[whole.transfer.to.account_id]}` : `← von ${names[whole.transfer.from.account_id]}`;
+    else if (isTransfer) where = `${names[whole.transfer.from.account_id]} → ${names[whole.transfer.to.account_id]}`;
     const sub = [
-        isTransfer ? `${names[t.transfer.from.account_id]} → ${names[t.transfer.to.account_id]}` : t.category,
+        where,
         showDate && dayLabel(t.booking_date),
         !isTransfer && names.__multi && names[t.account_id],
     ].filter(Boolean).join(' · ');
+    const amountClass = isHalf ? (t.amount > 0 ? 'text-income' : '') : isTransfer ? 'text-muted' : t.amount > 0 ? 'text-income' : '';
 
     return (
         <li>
-            <button onClick={() => onOpen(t)} className="flex w-full items-center gap-3 rounded-[20px] px-3 py-2.5 text-left active:bg-ink/5">
+            <button onClick={() => onOpen(whole || t)} className="flex w-full items-center gap-3 rounded-[20px] px-3 py-2.5 text-left active:bg-ink/5">
                 {isTransfer
                     ? (
                         <span className="flex size-10 shrink-0 items-center justify-center rounded-full bg-ink/[0.06]">
@@ -35,8 +43,8 @@ export function TransactionRow({ t, onOpen, showDate, names }) {
                     </p>
                     <p className="truncate text-xs text-muted">{sub}</p>
                 </div>
-                <p className={`tabular shrink-0 text-[15px] font-semibold ${isTransfer ? 'text-muted' : t.amount > 0 ? 'text-income' : ''}`}>
-                    {!isTransfer && t.amount > 0 ? '+' : ''}{money(t.amount)}
+                <p className={`tabular shrink-0 text-[15px] font-semibold ${amountClass}`}>
+                    {(!isTransfer || isHalf) && t.amount > 0 ? '+' : ''}{money(t.amount)}
                 </p>
             </button>
         </li>
@@ -56,10 +64,14 @@ export default function Transactions({ transactions, accounts, balances, month, 
     const names = accountNames(accounts);
     const q = query.toLowerCase().trim();
 
-    const base = useMemo(
-        () => (account ? transactions.filter((t) => t.account_id === account) : mergeTransfers(transactions)),
-        [transactions, account],
-    );
+    const base = useMemo(() => {
+        const merged = mergeTransfers(transactions);
+        if (!account) return merged;
+        const wholes = Object.fromEntries(merged.filter((t) => t.transfer).map((t) => [t.transfer_id, t]));
+        return transactions
+            .filter((t) => t.account_id === account)
+            .map((t) => (t.transfer_id && wholes[t.transfer_id] ? { ...t, whole: wholes[t.transfer_id] } : t));
+    }, [transactions, account]);
     const list = useMemo(() => {
         if (q) return base.filter((t) => `${t.counterparty} ${t.purpose} ${t.category} ${String(Math.abs(t.amount)).replace('.', ',')}`.toLowerCase().includes(q));
         return base.filter((t) => monthKey(t.booking_date) === month && (!filter || t.category === filter));
