@@ -4,11 +4,11 @@ import { dayLabel, money } from '../shared/format.js';
 
 const PAGE = 60;
 
-export default function TransactionList({ transactions, accounts, filter, onClearFilter }) {
+export default function TransactionList({ transactions, accounts, filter, onClearFilter, onOpen }) {
     const [query, setQuery] = useState('');
     const [shown, setShown] = useState(PAGE);
     const multiAccount = accounts.length > 1;
-    const accountName = Object.fromEntries(accounts.map((a) => [a.uid, a.name || a.bank]));
+    const accountName = Object.fromEntries(accounts.map((a) => [a.id, a.name]));
 
     const filtered = useMemo(() => {
         const q = query.toLowerCase().trim();
@@ -45,26 +45,27 @@ export default function TransactionList({ transactions, accounts, filter, onClea
                 />
             </label>
 
-            {!filtered.length && <p className="py-8 text-center text-sm text-muted">Keine Umsätze</p>}
+            {!filtered.length && <p className="py-8 text-center text-sm text-muted">Noch keine Umsätze in diesem Monat. Tipp auf „+“.</p>}
 
             {days.map((day) => (
                 <div key={day.date}>
                     <p className="mb-1 px-1 text-xs font-medium text-muted">{dayLabel(day.date)}</p>
                     <ul className="divide-y divide-line overflow-hidden rounded-3xl border border-line bg-card">
                         {day.items.map((t) => (
-                            <li key={t.id} className="flex items-start gap-3 px-4 py-3">
-                                <div className="min-w-0 flex-1">
-                                    <p className="truncate text-[15px] font-medium">{t.counterparty || t.purpose || 'Unbekannt'}</p>
-                                    <p className="truncate text-xs text-muted">
-                                        {t.category}
-                                        {t.status === 'PDNG' && ' · vorgemerkt'}
-                                        {multiAccount && ` · ${accountName[t.account_uid] || ''}`}
+                            <li key={t.id}>
+                                <button onClick={() => onOpen(t)} className="flex w-full items-start gap-3 px-4 py-3 text-left active:bg-ink/5">
+                                    <div className="min-w-0 flex-1">
+                                        <p className="truncate text-[15px] font-medium">{t.counterparty || t.purpose || 'Unbekannt'}</p>
+                                        <p className="truncate text-xs text-muted">
+                                            {t.category}
+                                            {multiAccount && ` · ${accountName[t.account_id] || ''}`}
+                                        </p>
+                                        {t.counterparty && t.purpose && <p className="mt-0.5 line-clamp-2 text-xs text-muted">{t.purpose}</p>}
+                                    </div>
+                                    <p className={`tabular shrink-0 text-[15px] font-medium ${t.amount > 0 ? 'text-income' : ''}`}>
+                                        {t.amount > 0 ? '+' : ''}{money(t.amount)}
                                     </p>
-                                    {t.counterparty && t.purpose && <p className="mt-0.5 line-clamp-2 text-xs text-muted">{t.purpose}</p>}
-                                </div>
-                                <p className={`tabular shrink-0 text-[15px] font-medium ${t.amount > 0 ? 'text-income' : ''}`}>
-                                    {t.amount > 0 ? '+' : ''}{money(t.amount)}
-                                </p>
+                                </button>
                             </li>
                         ))}
                     </ul>

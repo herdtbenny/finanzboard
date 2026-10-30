@@ -35,4 +35,19 @@ export function relative(iso) {
     return new Date(iso).toLocaleDateString('de-DE', { day: 'numeric', month: 'short' });
 }
 
-export const maskIban = (iban) => (iban ? `•••• ${iban.slice(-4)}` : '');
+export const todayIso = () => {
+    const d = new Date();
+    return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+};
+
+// "1.234,5" / "1234.50" / "12,-" → number, NaN if unreadable.
+export function parseAmount(text) {
+    let s = String(text).trim().replace(/\s|€|-$/g, '');
+    if (s.includes(',')) s = s.replace(/\./g, '').replace(',', '.');
+    return s ? Number(s) : NaN;
+}
+
+// Number → what goes back into an input field: "12,5".
+export const amountInput = (n) => (n || n === 0 ? Math.abs(n).toFixed(2).replace('.', ',') : '');
+
+export const newId = () => crypto.randomUUID();

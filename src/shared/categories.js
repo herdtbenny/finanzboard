@@ -1,7 +1,6 @@
 // Keyword rules, matched against counterparty + purpose (case-insensitive).
-// First match wins, so put the more specific rules first. Edit freely — the
-// categories are computed in the browser, so changes apply to all old
-// transactions too.
+// First match wins, so put the more specific rules first. They only suggest a
+// category while typing; the one picked in the form is what gets saved.
 export const CATEGORY_RULES = [
     { name: 'Umbuchung', match: ['umbuchung', 'übertrag', 'eigene überweisung'] },
     { name: 'Gehalt', match: ['gehalt', 'lohn', 'bezüge', 'salary'] },
@@ -18,10 +17,15 @@ export const CATEGORY_RULES = [
     { name: 'Gesundheit', match: ['apotheke', 'arzt', 'zahnarzt', 'physio'] },
     { name: 'Freizeit', match: ['kino', 'fitness', 'mcfit', 'urban sports', 'ticket', 'eventim', 'steam', 'playstation'] },
     { name: 'Gebühren & Bank', match: ['kontoführung', 'entgelt', 'zinsen', 'gebühr'] },
-    { name: 'PayPal', match: ['paypal'] },
 ];
 
 export const FALLBACK = { in: 'Sonstige Einnahmen', out: 'Sonstiges' };
+
+export const EXPENSE_CATEGORIES = [
+    'Lebensmittel', 'Miete & Wohnen', 'Essen & Trinken', 'Mobilität', 'Shopping', 'Abos', 'Versicherung',
+    'Handy & Internet', 'Drogerie', 'Gesundheit', 'Freizeit', 'Bargeld', 'Gebühren & Bank', 'Umbuchung', FALLBACK.out,
+];
+export const INCOME_CATEGORIES = ['Gehalt', 'Kunden', 'Erstattung', 'Umbuchung', FALLBACK.in];
 
 export function categorize(t) {
     const text = `${t.counterparty || ''} ${t.purpose || ''}`.toLowerCase();
@@ -30,6 +34,8 @@ export function categorize(t) {
     }
     return t.amount < 0 ? FALLBACK.out : FALLBACK.in;
 }
+
+export const categoryOf = (t) => t.category || categorize(t);
 
 // Moving money between your own accounts is neither income nor expense.
 export const isTransfer = (t) => t.category === 'Umbuchung';

@@ -1,0 +1,158 @@
+import { useState } from 'react';
+import { Trash2 } from 'lucide-react';
+import { categorize, EXPENSE_CATEGORIES, INCOME_CATEGORIES } from '../shared/categories.js';
+import { amountInput, newId, parseAmount, todayIso } from '../shared/format.js';
+import Sheet, { Field, inputClass } from './Sheet.jsx';
+
+// Add or edit one transaction. Until a category is tapped, it follows the
+// keyword rules as you type the counterparty / purpose.
+export default function TransactionSheet({ transaction, accounts, lastAccountId, counterparties, onSave, onDelete, onClose }) {
+    const editing = Boolean(transaction);
+    const [kind, setKind] = useState(transaction && transaction.amount > 0 ? 'in' : 'out');
+    const [amount, setAmount] = useState(amountInput(transaction?.amount));
+    const [counterparty, setCounterparty] = useState(transaction?.counterparty || '');
+    const [purpose, setPurpose] = useState(transaction?.purpose || '');
+    const [date, setDate] = useState(transaction?.booking_date || todayIso());
+    const [accountId, setAccountId] = useState(transaction?.account_id || lastAccountId || accounts[0]?.id);
+    const [category, setCategory] = useState(transaction?.category || null);
+    const [busy, setBusy] = useState(false);
+    const [confirmDelete, setConfirmDelete] = useState(false);
+    const [error, setError] = useState('');
+
+    const value = parseAmount(amount);
+    const signed = kind === 'out' ? -Math.abs(value) : Math.abs(value);
+    const suggested = categorize({ counterparty, purpose, amount: signed || (kind === 'out' ? -1 : 1) });
+    const shownCategory = category || suggested;
+    const options = kind === 'out' ? EXPENSE_CATEGORIES : INCOME_CATEGORIES;
+    const valid = Number.isFinite(value) && value !== 0 && accountId && date;
+
+    async function save(e) {
+        e.preventDefault();
+        if (!valid) return;
+        setBusy(true);
+        setError('');
+        try {
+            await onSave({
+                id: transaction?.id || newId(),
+                account_id: accountId,
+                booking_date: date,
+                amount: signed,
+                counterparty,
+                purpose,
+                category: shownCategory,
+            });
+            onClose();
+        } catch (err) {
+            setError(err.message);
+            setBusy(false);
+        }
+    }
+
+    async function remove() {
+        if (!confirmDelete) return setConfirmDelete(true);
+        setBusy(true);
+        try {
+            await onDelete(transaction.id);
+            onClose();
+        } catch (err) {
+            setError(err.message);
+            setBusy(false);
+        }
+    }
+
+    return (
+        <Sheet title={editing ? 'Umsatz bearbeiten' : 'Neuer Umsatz'} onClose={onClose}>
+            <form onSubmit={save} className="space-y-4 pb-4">
+                <div className="grid grid-cols-2 rounded-full border border-line bg-card p-1">
+                    {[['out', 'Ausgabe', 'bg-expense'], ['in', 'Einnahme', 'bg-income']].map(([k, label, bg]) => (
+                        <button
+                            key={k}
+                            type="button"
+                            onClick={() => { setKind(k); setCategory(null); }}
+                            className={`rounded-full py-2 text-sm font-medium transition-colors ${kind === k ? `${bg} text-white` : 'text-muted'}`}
+                        >
+                            {label}
+                        </button>
+                    ))}
+                </div>
+
+                <div className="flex items-baseline justify-center gap-2 py-2">
+                    <span className={`text-4xl font-semibold ${kind === 'out' ? 'text-expense' : 'text-income'}`}>{kind === 'out' ? '−' : '+'}</span>
+                    <input
+                        autoFocus={!editing}
+                        inputMode="decimal"
+                        placeholder="0,00"
+                        value={amount}
+                        onChange={(e) => setAmount(e.target.value.replace(/[^\d.,]/g, ''))}
+                        style={{ width: `${Math.max(4, amount.length) + 0.5}ch` }}
+                        className="tabular max-w-[70vw] bg-transparent text-center text-4xl font-semibold outline-none placeholder:text-line"
+                    />
+                    <span className="text-2xl text-muted">€</span>
+                </div>
+
+                <Field label={kind === 'out' ? 'Wo / an wen' : 'Von wem'}>
+                    <input
+                        list="counterparties"
+                        value={counterparty}
+                        onChange={(e) => setCounterparty(e.target.value)}
+                        placeholder={kind === 'out' ? 'z. B. REWE' : 'z. B. Arbeitgeber'}
+                        className={inputClass}
+                    />
+                    <datalist id="counterparties">
+                        {counterparties.map((c) => <option key={c} value={c} />)}
+                    </datalist>
+                </Field>
+
+                <Field label="Kategorie">
+                    <div className="flex flex-wrap gap-2">
+                        {options.map((c) => (
+                            <button
+                                key={c}
+                                type="button"
+                                onClick={() => setCategory(c)}
+                                className={`rounded-full border px-3 py-1.5 text-sm ${shownCategory === c ? 'border-ink bg-ink text-paper' : 'border-line bg-card'}`}
+                            >
+                                {c}
+                            </button>
+                        ))}
+                    </div>
+                </Field>
+
+                <div className={`grid gap-3 ${accounts.length > 1 ? 'grid-cols-2' : ''}`}>
+                    <Field label="Datum">
+                        <input type="date" value={date} onChange={(e) => setDate(e.target.value)} className={`${inputClass} min-h-12`} />
+                    </Field>
+                    {accounts.length > 1 && (
+                        <Field label="Konto">
+                            <select value={accountId} onChange={(e) => setAccountId(e.target.value)} className={`${inputClass} min-h-12 appearance-none`}>
+                                {accounts.map((a) => <option key={a.id} value={a.id}>{a.name}</option>)}
+                            </select>
+                        </Field>
+                    )}
+                </div>
+
+                <Field label="Notiz (optional)">
+                    <input value={purpose} onChange={(e) => setPurpose(e.target.value)} placeholder="Verwendungszweck" className={inputClass} />
+                </Field>
+
+                {error && <p className="text-sm text-expense">{error}</p>}
+
+                <div className="flex gap-2 pt-2">
+                    {editing && (
+                        <button
+                            type="button"
+                            onClick={remove}
+                            disabled={busy}
+                            className={`flex items-center justify-center gap-2 rounded-full border px-5 py-3 text-sm font-medium ${confirmDelete ? 'border-expense bg-expense text-white' : 'border-line bg-card text-expense'}`}
+                        >
+                            <Trash2 size={16} />{confirmDelete ? 'Wirklich?' : ''}
+                        </button>
+                    )}
+                    <button disabled={busy || !valid} className="flex-1 rounded-full bg-ink py-3 font-medium text-paper disabled:opacity-40">
+                        {busy ? 'Speichern …' : 'Speichern'}
+                    </button>
+                </div>
+            </form>
+        </Sheet>
+    );
+}
