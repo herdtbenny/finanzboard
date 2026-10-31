@@ -17,9 +17,9 @@ export default function Overview({ accounts, balances, series, transactions, mon
     const positive = accounts.reduce((s, a) => s + Math.max(0, balances[a.id]), 0);
 
     return (
-        <div className="stagger space-y-4">
+        <div className="space-y-4">
             {/* Hero: total balance and its trend */}
-            <section className="rounded-[28px] bg-ink px-5 pt-4 pb-4 text-paper shadow-xl shadow-black/10">
+            <section className="rounded-[28px] bg-ink px-5 pt-4 pb-4 text-paper">
                 <div className="flex items-baseline justify-between gap-3">
                     <p className="text-sm opacity-60">{point ? `Ende ${monthLabel(point.key)}` : 'Gesamtvermögen'}</p>
                     <p className="tabular text-2xl leading-none font-semibold tracking-tight">{money(point ? point.value : total)}</p>

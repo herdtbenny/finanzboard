@@ -15,7 +15,7 @@ export default function Accounts({ token, me, onMeChanged, accounts, balances, t
     const total = Object.values(balances).reduce((s, v) => s + v, 0);
 
     return (
-        <div className="stagger space-y-4">
+        <div className="space-y-4">
             <PageTitle right={<button onClick={() => setEditing({})} className="mb-1 rounded-full border border-line bg-card px-3.5 py-1.5 text-sm font-medium active:bg-ink/5">+ Konto</button>}>Konten</PageTitle>
 
             <Card className="px-2 py-2">

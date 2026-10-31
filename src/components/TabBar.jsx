@@ -9,7 +9,7 @@ export const TABS = [
     { id: 'accounts', label: 'Konten', Icon: Wallet },
 ];
 
-// A pill glides behind the active tab; its icon bounces when it gets active.
+// A pill glides behind the active tab.
 export default function TabBar({ tab, onTab, onAdd }) {
     const col = TABS.findIndex((t) => t?.id === tab);
     return (
@@ -18,7 +18,7 @@ export default function TabBar({ tab, onTab, onAdd }) {
             style={{ paddingBottom: 'env(safe-area-inset-bottom)' }}
         >
             <div className="relative mx-auto grid max-w-2xl grid-cols-5 items-center px-2 pt-1.5 pb-1.5">
-                <div className="pointer-events-none absolute inset-y-1.5 left-2 w-[calc((100%-1rem)/5)] transition-transform duration-[420ms] ease-[cubic-bezier(0.3,1.3,0.4,1)]" style={{ transform: `translateX(${col * 100}%)` }}>
+                <div className="pointer-events-none absolute inset-y-1.5 left-2 w-[calc((100%-1rem)/5)] transition-transform duration-300 ease-out" style={{ transform: `translateX(${col * 100}%)` }}>
                     <div className="mx-auto h-full w-[4.25rem] rounded-2xl bg-ink/[0.07]" />
                 </div>
                 {TABS.map((t) =>
@@ -29,7 +29,7 @@ export default function TabBar({ tab, onTab, onAdd }) {
                             aria-current={tab === t.id ? 'page' : undefined}
                             className={`relative flex flex-col items-center gap-0.5 rounded-2xl py-1.5 text-[11px] ${tab === t.id ? 'font-semibold text-ink' : 'text-muted'}`}
                         >
-                            <t.Icon key={tab === t.id ? 'on' : 'off'} size={22} strokeWidth={tab === t.id ? 2.2 : 1.7} className={tab === t.id ? 'pop' : ''} />
+                            <t.Icon size={22} strokeWidth={tab === t.id ? 2.2 : 1.7} />
                             {t.label}
                         </button>
                     ) : (

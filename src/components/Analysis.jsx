@@ -17,7 +17,7 @@ export default function Analysis({ transactions, accounts, recurrings, month, on
         .slice(0, 5);
 
     return (
-        <div className="stagger space-y-4">
+        <div className="space-y-4">
             <PageTitle>Analyse</PageTitle>
             <MonthSwitch month={month} onChange={onMonth} />
 
