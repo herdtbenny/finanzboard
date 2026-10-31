@@ -108,7 +108,7 @@ export default function Transactions({ transactions, accounts, balances, month, 
     const change = list.reduce((s, t) => s + (t.transfer ? 0 : t.amount), 0);
 
     return (
-        <div className="rise space-y-4">
+        <div className="stagger space-y-4">
             <PageTitle>Umsätze</PageTitle>
 
             <label className="flex items-center gap-2 rounded-full border border-line bg-card px-4 py-3">

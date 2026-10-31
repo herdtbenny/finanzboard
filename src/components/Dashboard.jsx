@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
-import { ChevronDown, Home, Wallet } from 'lucide-react';
+import { ChevronDown, Home } from 'lucide-react';
 import { api, Unauthorized } from '../api.js';
 import { categoryMemory, categoryOf, categoryOptions, setCustomCategories } from '../shared/categories.js';
 import { monthKey } from '../shared/format.js';
@@ -8,7 +8,7 @@ import Overview from './Overview.jsx';
 import Transactions from './Transactions.jsx';
 import Analysis from './Analysis.jsx';
 import Accounts, { AccountSheet } from './Accounts.jsx';
-import TabBar from './TabBar.jsx';
+import TabBar, { TABS } from './TabBar.jsx';
 import TransactionSheet from './TransactionSheet.jsx';
 
 const byDateDesc = (a, b) => b.booking_date.localeCompare(a.booking_date) || String(b.created_at).localeCompare(String(a.created_at));
@@ -17,6 +17,8 @@ export default function Dashboard({ token, me, space, onSpace, onMeChanged, onLo
     const [data, setData] = useState(null);
     const [error, setError] = useState('');
     const [tab, setTab] = useState('overview');
+    // Which side the next tab slides in from.
+    const [slide, setSlide] = useState('');
     const [month, setMonth] = useState(currentMonth);
     const [category, setCategory] = useState(null);
     const [account, setAccount] = useState(null);
@@ -121,7 +123,13 @@ export default function Dashboard({ token, me, space, onSpace, onMeChanged, onLo
     const options = useMemo(() => ({ in: categoryOptions(transactions, 'in'), out: categoryOptions(transactions, 'out') }), [transactions, data?.categories]);
 
     const pickMonth = (m) => { setMonth(m); setCategory(null); };
-    const goTo = (t) => { setTab(t); window.scrollTo({ top: 0 }); };
+    const goTo = (t) => {
+        if (t === tab) return window.scrollTo({ top: 0, behavior: 'smooth' });
+        const col = (id) => TABS.findIndex((x) => x?.id === id);
+        setSlide(col(t) > col(tab) ? 'from-right' : 'from-left');
+        setTab(t);
+        window.scrollTo({ top: 0 });
+    };
     const openCategory = (c) => { setCategory(c); goTo('transactions'); };
     const openAccount = (id) => { setAccount(id); goTo('transactions'); };
 
@@ -130,17 +138,8 @@ export default function Dashboard({ token, me, space, onSpace, onMeChanged, onLo
         content = <p className="rounded-2xl bg-expense/10 px-4 py-3 text-sm text-expense">{error}</p>;
     } else if (!data) {
         content = <p className="py-24 text-center text-muted">Lade …</p>;
-    } else if (!accounts.length) {
-        content = (
-            <div className="rise mt-16 space-y-4 text-center">
-                <span className="mx-auto flex size-16 items-center justify-center rounded-full bg-ink text-paper"><Wallet size={26} /></span>
-                <h1 className="text-2xl font-semibold tracking-tight">Willkommen</h1>
-                <p className="text-muted">Leg zuerst ein Konto mit seinem aktuellen Kontostand an.</p>
-                <button onClick={() => setNewAccount(true)} className="rounded-full bg-ink px-6 py-3 font-medium text-paper">Konto anlegen</button>
-            </div>
-        );
     } else if (tab === 'overview') {
-        content = <Overview accounts={accounts} balances={balances} series={series} transactions={transactions} month={month} onMonth={pickMonth} onOpen={setTxSheet} onAccount={openAccount} goTo={goTo} />;
+        content = <Overview onNewAccount={() => setNewAccount(true)} accounts={accounts} balances={balances} series={series} transactions={transactions} month={month} onMonth={pickMonth} onOpen={setTxSheet} onAccount={openAccount} goTo={goTo} />;
     } else if (tab === 'transactions') {
         content = (
             <Transactions
@@ -165,13 +164,13 @@ export default function Dashboard({ token, me, space, onSpace, onMeChanged, onLo
         );
     }
 
-    const ready = data && accounts.length > 0;
+    // Without an account there is nothing to book on yet: + creates one first.
     return (
-        <div className={`mx-auto min-h-dvh max-w-2xl px-4 pt-safe ${ready ? 'pb-tabbar' : 'pb-safe'}`}>
+        <div className="mx-auto min-h-dvh max-w-2xl px-4 pt-safe pb-tabbar">
             {me.spaces.length > 1 && <SpaceSwitch spaces={me.spaces} space={space} onSpace={onSpace} />}
-            <main key={tab}>{content}</main>
+            <main key={tab} className={slide}>{content}</main>
 
-            {ready && <TabBar tab={tab} onTab={goTo} onAdd={() => setTxSheet('new')} />}
+            {data && <TabBar tab={tab} onTab={goTo} onAdd={() => (accounts.length ? setTxSheet('new') : setNewAccount(true))} />}
 
             {(txSheet || recurringSheet) && (
                 <TransactionSheet

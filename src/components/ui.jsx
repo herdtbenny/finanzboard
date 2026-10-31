@@ -50,10 +50,15 @@ export function MonthSwitch({ month, onChange, compact }) {
 export function Bar({ value, marker, tone = 'bg-ink', thin }) {
     return (
         <div className={`relative rounded-full bg-ink/[0.07] ${thin ? 'h-1' : 'h-1.5'}`}>
-            <div className={`h-full rounded-full ${tone}`} style={{ width: `${Math.min(100, Math.max(value > 0 ? 2 : 0, value * 100))}%` }} />
+            <div className={`grow h-full rounded-full transition-[width] duration-500 ease-out ${tone}`} style={{ width: `${Math.min(100, Math.max(value > 0 ? 2 : 0, value * 100))}%` }} />
             {marker != null && marker <= 1 && (
                 <span className="absolute -top-1 h-3.5 w-0.5 rounded-full bg-ink/40" style={{ left: `calc(${marker * 100}% - 1px)` }} />
             )}
         </div>
     );
+}
+
+// A short tick on phones that support it (Android; iOS Safari has no API).
+export function haptic(ms = 8) {
+    try { navigator.vibrate?.(ms); } catch { /* not supported */ }
 }

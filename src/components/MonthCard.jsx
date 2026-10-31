@@ -6,9 +6,9 @@ import { isNeutral, isRefund } from '../shared/categories.js';
 import { monthKey } from '../shared/format.js';
 import { Bar, Card, MonthSwitch } from './ui.jsx';
 
-// The chosen month in one card: income against expenses and what was saved
-// (with the savings rate), the comparison with last month and with the six
-// months before, and the biggest expense categories.
+// The chosen month in one card: income against expenses, the biggest
+// expense categories, and below them what was saved (with the savings rate)
+// compared with last month and with the six months before.
 export default function MonthCard({ transactions, month, onMonth, onAll }) {
     const summary = monthSummary(transactions, month);
     const prevKey = shiftMonth(month, -1);
@@ -43,29 +43,6 @@ export default function MonthCard({ transactions, month, onMonth, onAll }) {
                 <Flow label="Einnahmen" count={nIn} value={summary.in} share={summary.in / scale} tone="bg-income" />
                 <Flow label="Ausgaben" count={nOut} value={summary.out} share={summary.out / scale} tone="bg-expense" />
             </div>
-            {/* Saved, with how it compares — one box */}
-            <div className="mt-4 rounded-2xl bg-ink/[0.04] px-4 py-3.5">
-                <div className="flex items-center justify-between gap-3">
-                    <div>
-                        <p className="text-xs text-muted">Gespart</p>
-                        {summary.rate != null && summary.net >= 0 && <p className="text-[11px] text-muted">{Math.round(summary.rate * 100)} % der Einnahmen</p>}
-                    </div>
-                    <span className={`tabular text-lg font-semibold tracking-tight ${summary.net < 0 ? 'text-expense' : 'text-income'}`}>
-                        {summary.net >= 0 ? '+' : ''}{money(summary.net)}
-                    </span>
-                </div>
-                {(prev != null || usual != null || Math.abs(valueChange) > 0.005) && (
-                    <div className="mt-3 space-y-1.5 border-t border-line pt-3">
-                        {prev != null && <Compare label={`als im ${prevName}`} base={prev} value={summary.net} />}
-                        {usual != null && <Compare label={`als im Schnitt ${avgFrom}\u2011${avgTo}`} base={usual} value={summary.net} />}
-                        {Math.abs(valueChange) > 0.005 && (
-                            <p className="tabular text-xs text-muted">
-                                Depot {valueChange >= 0 ? '+' : ''}{money(valueChange)} → Vermögen {summary.net + valueChange >= 0 ? '+' : ''}{money(summary.net + valueChange)}
-                            </p>
-                        )}
-                    </div>
-                )}
-            </div>
 
             {top.length > 0 && (
                 <div className="mt-5">
@@ -93,6 +70,29 @@ export default function MonthCard({ transactions, month, onMonth, onAll }) {
                 </div>
             )}
 
+            {/* Saved, with how it compares — one box */}
+            <div className="mt-5 rounded-2xl bg-ink/[0.04] px-4 py-3.5">
+                <div className="flex items-center justify-between gap-3">
+                    <div>
+                        <p className="text-xs text-muted">Gespart</p>
+                        {summary.rate != null && summary.net >= 0 && <p className="text-[11px] text-muted">{Math.round(summary.rate * 100)} % der Einnahmen</p>}
+                    </div>
+                    <span className={`tabular text-lg font-semibold tracking-tight ${summary.net < 0 ? 'text-expense' : 'text-income'}`}>
+                        {summary.net >= 0 ? '+' : ''}{money(summary.net)}
+                    </span>
+                </div>
+                {(prev != null || usual != null || Math.abs(valueChange) > 0.005) && (
+                    <div className="mt-3 space-y-1.5 border-t border-line pt-3">
+                        {prev != null && <Compare label={`als im ${prevName}`} base={prev} value={summary.net} />}
+                        {usual != null && <Compare label={`als im Schnitt ${avgFrom}\u2011${avgTo}`} base={usual} value={summary.net} />}
+                        {Math.abs(valueChange) > 0.005 && (
+                            <p className="tabular text-xs text-muted">
+                                Depot {valueChange >= 0 ? '+' : ''}{money(valueChange)} → Vermögen {summary.net + valueChange >= 0 ? '+' : ''}{money(summary.net + valueChange)}
+                            </p>
+                        )}
+                    </div>
+                )}
+            </div>
         </Card>
     );
 }
@@ -105,7 +105,7 @@ function Flow({ label, count, value, share, tone }) {
                 <span className="tabular text-base font-semibold">{money(value)}</span>
             </div>
             <div className="h-2 rounded-full bg-ink/[0.07]">
-                <div className={`h-full rounded-full ${tone}`} style={{ width: `${Math.max(value > 0 ? 2 : 0, share * 100)}%` }} />
+                <div className={`grow h-full rounded-full transition-[width] duration-500 ease-out ${tone}`} style={{ width: `${Math.max(value > 0 ? 2 : 0, share * 100)}%` }} />
             </div>
         </div>
     );
