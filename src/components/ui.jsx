@@ -32,17 +32,26 @@ export function PageTitle({ children, right }) {
 // is the last month to go to (one with vorgemerkte bookings may lie ahead).
 export function MonthSwitch({ month, onChange, compact, max = currentMonth() }) {
     const btn = 'flex size-9 items-center justify-center rounded-full active:bg-ink/5 disabled:opacity-25';
+    const now = currentMonth();
     return (
-        <div className="inline-flex items-center gap-1 rounded-full border border-line bg-card p-0.5">
-            <button onClick={() => onChange(shiftMonth(month, -1))} aria-label="Vorheriger Monat" className={btn}>
-                <ChevronLeft size={17} />
-            </button>
-            <span className={`text-center text-sm font-medium ${compact ? 'min-w-[4.5rem]' : 'min-w-[7.5rem]'}`}>
-                {compact ? monthLabel(month, { month: 'short', year: 'numeric' }) : monthLabel(month)}
-            </span>
-            <button onClick={() => onChange(shiftMonth(month, 1))} disabled={month >= max} aria-label="Nächster Monat" className={btn}>
-                <ChevronRight size={17} />
-            </button>
+        <div className="inline-flex items-center gap-1.5">
+            <div className="inline-flex items-center gap-1 rounded-full border border-line bg-card p-0.5">
+                <button onClick={() => onChange(shiftMonth(month, -1))} aria-label="Vorheriger Monat" className={btn}>
+                    <ChevronLeft size={17} />
+                </button>
+                <span className={`text-center text-sm font-medium ${compact ? 'min-w-[4.5rem]' : 'min-w-[7.5rem]'}`}>
+                    {compact ? monthLabel(month, { month: 'short', year: 'numeric' }) : monthLabel(month)}
+                </span>
+                <button onClick={() => onChange(shiftMonth(month, 1))} disabled={month >= max} aria-label="Nächster Monat" className={btn}>
+                    <ChevronRight size={17} />
+                </button>
+            </div>
+            {/* Back to this month, once you've moved away from it */}
+            {month !== now && (
+                <button onClick={() => onChange(now)} aria-label="Zurück zum aktuellen Monat" className="h-10 shrink-0 rounded-full bg-ink px-3.5 text-sm font-medium text-paper active:opacity-80">
+                    Heute
+                </button>
+            )}
         </div>
     );
 }
@@ -64,17 +73,11 @@ export function haptic(ms = 8) {
     try { navigator.vibrate?.(ms); } catch { /* not supported */ }
 }
 
-// An on/off switch as a full-width row with a label and a hint.
-export function Toggle({ on, onChange, label, hint }) {
+// A bare on/off switch; `label` names it for screen readers.
+export function Switch({ on, onChange, label }) {
     return (
-        <button type="button" role="switch" aria-checked={on} onClick={() => onChange(!on)} className="flex w-full items-center gap-3 rounded-2xl border border-line bg-card px-4 py-3 text-left">
-            <div className="min-w-0 flex-1">
-                <p className="text-sm font-medium">{label}</p>
-                {hint && <p className="text-xs text-muted">{hint}</p>}
-            </div>
-            <span className={`flex h-7 w-12 shrink-0 items-center rounded-full p-0.5 transition-colors ${on ? 'bg-ink' : 'bg-ink/15'}`}>
-                <span className={`size-6 rounded-full bg-paper shadow transition-transform ${on ? 'translate-x-5' : ''}`} />
-            </span>
+        <button type="button" role="switch" aria-checked={on} aria-label={label} onClick={() => onChange(!on)} className={`flex h-7 w-12 shrink-0 items-center rounded-full p-0.5 transition-colors ${on ? 'bg-income' : 'bg-ink/15'}`}>
+            <span className={`size-6 rounded-full bg-paper shadow transition-transform ${on ? 'translate-x-5' : ''}`} />
         </button>
     );
 }

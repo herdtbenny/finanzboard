@@ -4,7 +4,7 @@ import { CategoryIcon } from '../shared/categoryIcons.jsx';
 import { dayLabel, money, monthKey } from '../shared/format.js';
 import { isNeutral, isRefund } from '../shared/categories.js';
 import { mergeTransfers, transferTitle } from '../shared/transfers.js';
-import { isBooked } from '../shared/schedule.js';
+import { bookingsFor, isBooked, occurrencesIn } from '../shared/schedule.js';
 import { MonthSwitch, PageTitle } from './ui.jsx';
 
 const PAGE = 80;
@@ -13,7 +13,7 @@ const PAGE = 80;
 // without sign. In one account's statement a transfer shows as its half
 // (`t.whole` = the merged transfer): signed, with where the money went to
 // or came from; tapping it opens the whole transfer. Vorgemerkt (not paid
-// yet, or dated ahead) shows with a clock and a lighter amount.
+// yet, or dated ahead) shows greyed out as a whole, with a clock.
 export function TransactionRow({ t, onOpen, showDate, names }) {
     const whole = t.transfer ? t : t.whole;
     const isTransfer = Boolean(whole);
@@ -34,7 +34,7 @@ export function TransactionRow({ t, onOpen, showDate, names }) {
 
     return (
         <li>
-            <button onClick={() => onOpen(whole || t)} className="flex w-full items-center gap-3 rounded-[20px] px-3 py-2.5 text-left active:bg-ink/5">
+            <button onClick={() => onOpen(whole || t)} className={`flex w-full items-center gap-3 rounded-[20px] px-3 py-2.5 text-left active:bg-ink/5 ${booked ? '' : 'opacity-45'}`}>
                 {isTransfer
                     ? (
                         <span className="flex size-10 shrink-0 items-center justify-center rounded-full bg-ink/[0.06]">
@@ -50,7 +50,7 @@ export function TransactionRow({ t, onOpen, showDate, names }) {
                     </p>
                     <p className="truncate text-xs text-muted">{sub}</p>
                 </div>
-                <p className={`tabular shrink-0 text-[15px] font-semibold ${amountClass} ${booked ? '' : 'opacity-55'}`}>
+                <p className={`tabular shrink-0 text-[15px] font-semibold ${amountClass}`}>
                     {(!isTransfer || isHalf) && t.amount > 0 ? '+' : ''}{money(t.amount)}
                 </p>
             </button>
@@ -65,7 +65,9 @@ export function accountNames(accounts) {
 // Searching looks through all months. Without an account filter, transfers
 // show as one entry; with one, the list is that account's statement: each
 // half of a transfer with its sign, plus the balance.
-export default function Transactions({ transactions, accounts, balances, pending, month, maxMonth, onMonth, filter, onClearFilter, account, onAccount, onOpen }) {
+// Months go on without end: standing orders show in every month ahead, also
+// past the month they are booked up to (`projected`, opening the order).
+export default function Transactions({ transactions, recurrings, accounts, balances, pending, month, onMonth, filter, onClearFilter, account, onAccount, onOpen, onOpenRecurring }) {
     const [query, setQuery] = useState('');
     // 'all' | 'out' | 'in'
     const [type, setType] = useState('all');
@@ -73,14 +75,23 @@ export default function Transactions({ transactions, accounts, balances, pending
     const names = accountNames(accounts);
     const q = query.toLowerCase().trim();
 
+    const all = useMemo(() => {
+        if (q) return transactions;
+        const ahead = recurrings.flatMap((r) => occurrencesIn(r, month).flatMap((d) => bookingsFor(r, d)))
+            .map((t) => ({ ...t, amount: Number(t.amount), projected: true, created_at: '' }));
+        if (!ahead.length) return transactions;
+        return [...ahead, ...transactions].sort((a, b) => b.booking_date.localeCompare(a.booking_date));
+    }, [transactions, recurrings, month, q]);
+    const open = (t) => (t.projected ? onOpenRecurring(recurrings.find((r) => r.id === t.recurring_id)) : onOpen(t));
+
     const base = useMemo(() => {
-        const merged = mergeTransfers(transactions);
+        const merged = mergeTransfers(all);
         if (!account) return merged;
         const wholes = Object.fromEntries(merged.filter((t) => t.transfer).map((t) => [t.transfer_id, t]));
-        return transactions
+        return all
             .filter((t) => t.account_id === account)
             .map((t) => (t.transfer_id && wholes[t.transfer_id] ? { ...t, whole: wholes[t.transfer_id] } : t));
-    }, [transactions, account]);
+    }, [all, account]);
     const list = useMemo(() => {
         // Transfers and corrections are neither; they only show under "Alle".
         // Refunds belong to the expenses they lower.
@@ -94,9 +105,11 @@ export default function Transactions({ transactions, accounts, balances, pending
         return base.filter((t) => ofType(t) && monthKey(t.booking_date) === month && (!filter || t.category === filter));
     }, [base, q, month, filter, type]);
 
+    // Sums leave out what is vorgemerkt: it is listed, but not spent yet.
+    const counts = (t) => isBooked(t.whole || t);
     const days = [];
     for (const t of list.slice(0, shown)) {
-        const value = t.transfer ? 0 : t.amount;
+        const value = t.transfer || !counts(t) ? 0 : t.amount;
         const last = days[days.length - 1];
         if (last?.date === t.booking_date) { last.items.push(t); last.sum += value; } else days.push({ date: t.booking_date, items: [t], sum: value });
     }
@@ -106,11 +119,13 @@ export default function Transactions({ transactions, accounts, balances, pending
     let income = 0;
     let expenses = 0;
     for (const t of list) {
+        if (!counts(t)) continue;
         if (t.transfer || t.whole || isNeutral(t)) continue;
         if (t.amount > 0 && !isRefund(t)) income += t.amount;
         else expenses -= t.amount;
     }
-    const change = list.reduce((s, t) => s + (t.transfer ? 0 : t.amount), 0);
+    const bookedCount = list.filter(counts).length;
+    const change = list.reduce((s, t) => s + (t.transfer || !counts(t) ? 0 : t.amount), 0);
 
     return (
         <div className="space-y-4">
@@ -129,7 +144,7 @@ export default function Transactions({ transactions, accounts, balances, pending
 
             {/* Month and account side by side; the account pill takes the rest of the row */}
             <div className="flex items-center gap-2">
-                {!q && <div className="shrink-0"><MonthSwitch month={month} onChange={onMonth} compact max={maxMonth} /></div>}
+                {!q && <div className="shrink-0"><MonthSwitch month={month} onChange={onMonth} compact max="9999-12" /></div>}
                 {accounts.length > 1 && (
                     <label className={`relative flex min-w-0 flex-1 items-center rounded-full border ${account ? 'border-ink bg-ink text-paper' : 'border-line bg-card'}`}>
                         <select
@@ -165,7 +180,7 @@ export default function Transactions({ transactions, accounts, balances, pending
 
             <p className="flex flex-wrap justify-between gap-x-3 gap-y-0.5 px-1 text-xs text-muted">
                 <span>
-                    {list.length} {list.length === 1 ? 'Eintrag' : 'Einträge'}{q ? ' gefunden' : ''}
+                    {bookedCount} {bookedCount === 1 ? 'Eintrag' : 'Einträge'}{q ? ' gefunden' : ''}
                     {account ? (
                         <> · Veränderung <span className={`tabular font-medium ${change < 0 ? 'text-expense' : 'text-income'}`}>{change > 0 ? '+' : ''}{money(change)}</span></>
                     ) : (
@@ -192,7 +207,7 @@ export default function Transactions({ transactions, accounts, balances, pending
                         <span className="tabular">{money(day.sum)}</span>
                     </div>
                     <ul className="rounded-[24px] border border-line bg-card p-1">
-                        {day.items.map((t) => <TransactionRow key={t.id} t={t} onOpen={onOpen} names={account ? { ...names, __multi: false } : names} />)}
+                        {day.items.map((t) => <TransactionRow key={t.id} t={t} onOpen={open} names={account ? { ...names, __multi: false } : names} />)}
                     </ul>
                 </section>
             ))}

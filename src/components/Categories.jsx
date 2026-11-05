@@ -1,9 +1,9 @@
 import { useState } from 'react';
-import { ChevronDown, Trash2 } from 'lucide-react';
+import { ChevronDown } from 'lucide-react';
 import { CategoryIcon, ICON_SET } from '../shared/categoryIcons.jsx';
 import { EXPENSE_CATEGORIES, INCOME_CATEGORIES } from '../shared/categories.js';
 import { newId } from '../shared/format.js';
-import Sheet, { Field, inputClass } from './Sheet.jsx';
+import Sheet, { DeleteButton, Field, inputClass, SaveButton } from './Sheet.jsx';
 import { Card, CardHeader } from './ui.jsx';
 
 // The person's own categories, plus the defaults to look at.
@@ -74,10 +74,19 @@ function CategorySheet({ category, onSave, onDelete, onClose }) {
     }
 
     return (
-        <Sheet title={isNew ? 'Neue Kategorie' : category.name} onClose={onClose}>
-            <form onSubmit={(e) => { e.preventDefault(); run(() => onSave({ id: category.id || newId(), name, kind, icon })); }} className="space-y-4 pb-4">
+        <Sheet
+            title={isNew ? 'Neue Kategorie' : category.name}
+            onClose={onClose}
+            action={(
+                <>
+                    {!isNew && <DeleteButton onClick={() => (confirm ? run(() => onDelete(category.id)) : setConfirm(true))} disabled={busy} confirm={confirm} confirmText="→ Sonstiges?" />}
+                    <SaveButton form="category-form" disabled={!name.trim()} busy={busy} />
+                </>
+            )}
+        >
+            <form id="category-form" onSubmit={(e) => { e.preventDefault(); run(() => onSave({ id: category.id || newId(), name, kind, icon })); }} className="space-y-4 pb-4">
                 <Field label="Name">
-                    <input autoFocus={isNew} maxLength={30} value={name} onChange={(e) => setName(e.target.value)} placeholder="z. B. Haustier" className={inputClass} />
+                    <input maxLength={30} value={name} onChange={(e) => setName(e.target.value)} placeholder="z. B. Haustier" className={inputClass} />
                 </Field>
                 <Field label="Art" group>
                     <div className="grid grid-cols-2 rounded-full border border-line bg-card p-1">
@@ -109,20 +118,6 @@ function CategorySheet({ category, onSave, onDelete, onClose }) {
                 )}
 
                 {error && <p className="text-sm text-expense">{error}</p>}
-                <div className="flex gap-2 pt-2">
-                    {!isNew && (
-                        <button
-                            type="button"
-                            onClick={() => (confirm ? run(() => onDelete(category.id)) : setConfirm(true))}
-                            className={`flex items-center gap-2 rounded-full border px-4 py-3 text-sm font-medium ${confirm ? 'border-expense bg-expense text-white' : 'border-line bg-card text-expense'}`}
-                        >
-                            <Trash2 size={16} />{confirm ? 'Einträge → Sonstiges?' : ''}
-                        </button>
-                    )}
-                    <button disabled={busy || !name.trim()} className="flex-1 rounded-full bg-ink py-3 font-medium text-paper disabled:opacity-40">
-                        {busy ? 'Speichern …' : 'Speichern'}
-                    </button>
-                </div>
             </form>
         </Sheet>
     );

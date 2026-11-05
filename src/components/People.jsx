@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useState } from 'react';
-import { Check, ChevronRight, KeyRound, Shield, Trash2, UserRound } from 'lucide-react';
+import { ChevronRight, KeyRound, Shield, UserRound } from 'lucide-react';
 import { api } from '../api.js';
-import Sheet, { Field, inputClass } from './Sheet.jsx';
+import Sheet, { DeleteButton, Field, inputClass, SaveButton } from './Sheet.jsx';
 import { Card, CardHeader } from './ui.jsx';
 
 // The signed-in person: name and their own password.
@@ -38,8 +38,8 @@ function PasswordSheet({ token, onClose }) {
     }
 
     return (
-        <Sheet title="Passwort ändern" onClose={onClose}>
-            <form onSubmit={save} className="space-y-4 pb-4">
+        <Sheet title="Passwort ändern" onClose={onClose} action={<SaveButton form="password-form" disabled={!current || password.length < 6} busy={state.busy} done={state.done} />}>
+            <form id="password-form" onSubmit={save} className="space-y-4 pb-4">
                 <Field label="Aktuelles Passwort">
                     <input type="password" autoComplete="current-password" value={current} onChange={(e) => setCurrent(e.target.value)} className={inputClass} />
                 </Field>
@@ -47,9 +47,6 @@ function PasswordSheet({ token, onClose }) {
                     <input type="password" autoComplete="new-password" value={password} onChange={(e) => setPassword(e.target.value)} className={inputClass} />
                 </Field>
                 {state.error && <p className="text-sm text-expense">{state.error}</p>}
-                <button disabled={state.busy || !current || password.length < 6} className="flex w-full items-center justify-center gap-2 rounded-full bg-ink py-3 font-medium text-paper disabled:opacity-40">
-                    {state.done ? <><Check size={18} /> Geändert</> : state.busy ? 'Speichern …' : 'Speichern'}
-                </button>
             </form>
         </Sheet>
     );
@@ -129,10 +126,26 @@ function PersonSheet({ person, me, onAct, onClose }) {
     }
 
     return (
-        <Sheet title={isNew ? 'Neue Person' : person.name} onClose={onClose}>
-            <form onSubmit={save} className="space-y-4 pb-4">
+        <Sheet
+            title={isNew ? 'Neue Person' : person.name}
+            onClose={onClose}
+            action={(
+                <>
+                    {!isNew && !self && (
+                        <DeleteButton
+                            onClick={() => (confirm ? run(() => onAct({ action: 'deleteUser', id: person.id })) : setConfirm(true))}
+                            disabled={state.busy}
+                            confirm={confirm}
+                            confirmText="Mit allen Daten?"
+                        />
+                    )}
+                    <SaveButton form="person-form" disabled={!name.trim() || (isNew && password.length < 6)} busy={state.busy} />
+                </>
+            )}
+        >
+            <form id="person-form" onSubmit={save} className="space-y-4 pb-4">
                 <Field label="Benutzername (zum Anmelden)">
-                    <input autoFocus={isNew} autoCapitalize="words" value={name} onChange={(e) => setName(e.target.value)} placeholder="z. B. Mama" className={inputClass} />
+                    <input autoCapitalize="words" value={name} onChange={(e) => setName(e.target.value)} placeholder="z. B. Mama" className={inputClass} />
                 </Field>
                 <Field label={isNew ? 'Passwort (mind. 6 Zeichen)' : 'Neues Passwort (leer lassen = unverändert)'}>
                     <div className="relative">
@@ -142,20 +155,6 @@ function PersonSheet({ person, me, onAct, onClose }) {
                 </Field>
 
                 {state.error && <p className="text-sm text-expense">{state.error}</p>}
-                <div className="flex gap-2 pt-2">
-                    {!isNew && !self && (
-                        <button
-                            type="button"
-                            onClick={() => (confirm ? run(() => onAct({ action: 'deleteUser', id: person.id })) : setConfirm(true))}
-                            className={`flex items-center gap-2 rounded-full border px-4 py-3 text-sm font-medium ${confirm ? 'border-expense bg-expense text-white' : 'border-line bg-card text-expense'}`}
-                        >
-                            <Trash2 size={16} />{confirm ? 'Mit allen Daten löschen?' : ''}
-                        </button>
-                    )}
-                    <button disabled={state.busy || !name.trim() || (isNew && password.length < 6)} className="flex-1 rounded-full bg-ink py-3 font-medium text-paper disabled:opacity-40">
-                        {state.busy ? 'Speichern …' : 'Speichern'}
-                    </button>
-                </div>
             </form>
         </Sheet>
     );

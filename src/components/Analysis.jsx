@@ -2,6 +2,7 @@ import { CategoryIcon } from '../shared/categoryIcons.jsx';
 import { isNeutral } from '../shared/categories.js';
 import { money, monthKey } from '../shared/format.js';
 import { averageBefore, monthSummary } from '../shared/insights.js';
+import { isBooked } from '../shared/schedule.js';
 import MonthChart from './MonthChart.jsx';
 import Recurrings from './Recurrings.jsx';
 import { accountNames, TransactionRow } from './Transactions.jsx';
@@ -12,7 +13,7 @@ export default function Analysis({ transactions, accounts, recurrings, month, ma
     const avg = averageBefore(transactions, month);
     const cats = Object.entries(summary.byCategory).sort((a, b) => b[1] - a[1]);
     const biggest = transactions
-        .filter((t) => monthKey(t.booking_date) === month && t.amount < 0 && !isNeutral(t))
+        .filter((t) => monthKey(t.booking_date) === month && t.amount < 0 && !isNeutral(t) && isBooked(t))
         .sort((a, b) => a.amount - b.amount)
         .slice(0, 5);
 

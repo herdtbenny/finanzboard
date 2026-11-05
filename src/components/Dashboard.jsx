@@ -152,12 +152,12 @@ export default function Dashboard({ token, me, onMeChanged, onLogout }) {
     } else if (!data) {
         content = <p className="py-24 text-center text-muted">Lade …</p>;
     } else if (tab === 'overview') {
-        content = <Overview onNewAccount={() => setNewAccount(true)} accounts={accounts} balances={balances} pending={pending} series={series} transactions={transactions} month={month} maxMonth={lastMonth} onMonth={pickMonth} onOpen={setTxSheet} onAccount={openAccount} goTo={goTo} />;
+        content = <Overview onNewAccount={() => setNewAccount(true)} accounts={accounts} balances={balances} series={series} transactions={transactions} month={month} maxMonth={lastMonth} onMonth={pickMonth} onOpen={setTxSheet} onAccount={openAccount} goTo={goTo} />;
     } else if (tab === 'transactions') {
         content = (
             <Transactions
-                transactions={transactions} accounts={accounts} balances={balances} pending={pending} month={month} maxMonth={lastMonth} onMonth={pickMonth}
-                filter={category} onClearFilter={() => setCategory(null)} account={account} onAccount={setAccount} onOpen={setTxSheet}
+                transactions={transactions} recurrings={data.recurrings || []} accounts={accounts} balances={balances} pending={pending} month={month} onMonth={pickMonth}
+                filter={category} onClearFilter={() => setCategory(null)} account={account} onAccount={setAccount} onOpen={setTxSheet} onOpenRecurring={setRecurringSheet}
             />
         );
     } else if (tab === 'analysis') {
@@ -170,7 +170,7 @@ export default function Dashboard({ token, me, onMeChanged, onLogout }) {
     } else {
         content = (
             <Accounts
-                token={token} me={me} onMeChanged={onMeChanged} accounts={accounts} balances={balances} pending={pending} transactions={transactions}
+                token={token} me={me} onMeChanged={onMeChanged} accounts={accounts} balances={balances} transactions={transactions}
                 categories={data.categories || []} onSave={saveAccount} onDelete={deleteAccount} onSaveTransactions={saveTransactions}
                 onSaveCategory={saveCategory} onDeleteCategory={deleteCategory} onLogout={onLogout}
             />

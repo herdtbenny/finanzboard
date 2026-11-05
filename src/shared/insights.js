@@ -7,11 +7,14 @@ export const currentMonth = () => today().slice(0, 7);
 
 // Income, expenses and expenses per category of one month. Transfers,
 // balance corrections and depot value changes are left out; refunds lower
-// their category's expenses; `invested` is what went into a depot.
+// their category's expenses; `invested` is what went into a depot. Only what
+// is booked counts — vorgemerkt (not paid yet, or dated ahead) shows in the
+// list of transactions and nowhere else.
 export function monthSummary(transactions, key) {
     const s = { in: 0, out: 0, invested: 0, byCategory: {} };
+    const now = today();
     for (const t of transactions) {
-        if (monthKey(t.booking_date) !== key) continue;
+        if (monthKey(t.booking_date) !== key || !isBooked(t, now)) continue;
         if (t.category === 'Investieren' && t.amount > 0) s.invested += t.amount;
         if (isNeutral(t)) continue;
         if (t.amount > 0 && !isRefund(t)) s.in += t.amount;
@@ -73,10 +76,12 @@ export function balanceSeries(accounts, transactions, n = 12) {
 
 // How much the total of all accounts changed in a month: every booking
 // counts, also depot value changes (transfers cancel out) — except balance
-// corrections, which catch up on earlier months instead of this one.
+// corrections, which catch up on earlier months instead of this one, and
+// anything vorgemerkt.
 export function balanceChange(transactions, key) {
     let sum = 0;
-    for (const t of transactions) if (monthKey(t.booking_date) === key && t.category !== 'Kontostand') sum += t.amount;
+    const now = today();
+    for (const t of transactions) if (monthKey(t.booking_date) === key && t.category !== 'Kontostand' && isBooked(t, now)) sum += t.amount;
     return sum;
 }
 

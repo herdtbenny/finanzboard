@@ -20,15 +20,14 @@ export default function MonthCard({ transactions, month, maxMonth, onMonth, onAl
     const top = Object.entries(summary.byCategory).sort((a, b) => b[1] - a[1]).slice(0, 3);
     const scale = Math.max(summary.in, summary.out, 1);
 
-    // How many bookings stand behind income and expenses, and how many of
-    // them are only vorgemerkt (they count in the month all the same).
+    // How many bookings stand behind income and expenses (booked only, like
+    // the sums).
     const now = today();
-    const n = { in: 0, out: 0, inAhead: 0, outAhead: 0 };
+    const n = { in: 0, out: 0 };
     for (const t of transactions) {
-        if (monthKey(t.booking_date) !== month || isNeutral(t)) continue;
+        if (monthKey(t.booking_date) !== month || isNeutral(t) || !isBooked(t, now)) continue;
         const side = t.amount > 0 && !isRefund(t) ? 'in' : 'out';
         n[side]++;
-        if (!isBooked(t, now)) n[`${side}Ahead`]++;
     }
     const prevName = monthLabel(prevKey, { month: 'long' });
     const avgFrom = monthLabel(shiftMonth(month, -6), { month: 'short' }).replace('.', '');
@@ -43,8 +42,8 @@ export default function MonthCard({ transactions, month, maxMonth, onMonth, onAl
 
             {/* Income − expenses = saved */}
             <div className="space-y-3">
-                <Flow label="Einnahmen" count={n.in} ahead={n.inAhead} value={summary.in} share={summary.in / scale} tone="bg-income" />
-                <Flow label="Ausgaben" count={n.out} ahead={n.outAhead} value={summary.out} share={summary.out / scale} tone="bg-expense" />
+                <Flow label="Einnahmen" count={n.in} value={summary.in} share={summary.in / scale} tone="bg-income" />
+                <Flow label="Ausgaben" count={n.out} value={summary.out} share={summary.out / scale} tone="bg-expense" />
             </div>
 
             {top.length > 0 && (
@@ -100,11 +99,11 @@ export default function MonthCard({ transactions, month, maxMonth, onMonth, onAl
     );
 }
 
-function Flow({ label, count, ahead, value, share, tone }) {
+function Flow({ label, count, value, share, tone }) {
     return (
         <div>
             <div className="mb-1.5 flex items-baseline justify-between text-sm">
-                <span className="text-muted">{label} <span className="text-xs">· {count} {count === 1 ? 'Buchung' : 'Buchungen'}{ahead > 0 && `, ${ahead} vorgemerkt`}</span></span>
+                <span className="text-muted">{label} <span className="text-xs">· {count} {count === 1 ? 'Buchung' : 'Buchungen'}</span></span>
                 <span className="tabular text-base font-semibold">{money(value)}</span>
             </div>
             <div className="h-2 rounded-full bg-ink/[0.07]">

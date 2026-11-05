@@ -1,13 +1,13 @@
 import { useState } from 'react';
-import { ArrowDown, Check, Clock, Repeat, Trash2 } from 'lucide-react';
+import { ArrowDown, Clock, Repeat } from 'lucide-react';
 import { categorize, FALLBACK, NEUTRAL_CATEGORIES } from '../shared/categories.js';
 import { amountInput, newId, parseAmount, todayIso } from '../shared/format.js';
-import { isBooked, today } from '../shared/schedule.js';
+import { today } from '../shared/schedule.js';
 import { REPEATS } from '../shared/repeat.js';
-import Sheet, { Field, inputClass } from './Sheet.jsx';
+import Sheet, { DeleteButton, Field, inputClass, SaveButton } from './Sheet.jsx';
 import { useReceiptScanner } from './ReceiptScanner.jsx';
 import CategoryPicker from './CategoryPicker.jsx';
-import { Toggle } from './ui.jsx';
+import { Switch } from './ui.jsx';
 
 const KINDS = [['out', 'Ausgabe', 'bg-expense text-white'], ['in', 'Einnahme', 'bg-income text-white'], ['transfer', 'Umbuchung', 'bg-ink text-paper']];
 
@@ -60,6 +60,11 @@ export default function TransactionSheet({
     const valid = Number.isFinite(value) && value !== 0 && accountId && date && (!transfer || (toAccountId && toAccountId !== accountId));
     // Editing can't turn a transfer into a single booking or back.
     const kindLocked = (k) => editing && !isRecurring && (k === 'transfer') !== (initialKind === 'transfer');
+    // The date row: repeat only for new entries and standing orders; the paid
+    // switch is narrow, a repeat's end date as wide as the others.
+    const showRepeat = isRecurring || !editing;
+    const rowCols = repeat ? 'grid-cols-3' : showRepeat ? 'grid-cols-[1fr_1fr_auto]' : 'grid-cols-[1fr_auto]';
+    const compactInput = 'w-full min-w-0 rounded-2xl border border-line bg-card px-3 py-3 text-[15px] outline-none focus:border-ink';
     const title = isRecurring ? (editing ? 'Dauerauftrag' : 'Neuer Dauerauftrag') : editing ? 'Bearbeiten' : 'Neu';
 
     // A read receipt fills what it found; the category then follows the shop.
@@ -86,14 +91,10 @@ export default function TransactionSheet({
         }
     }
 
-    // `paid`: the "Bezahlt" button — no longer pending, and a date ahead
-    // moves to today, when the money actually went.
-    function save(e, paid = false) {
-        e?.preventDefault();
+    function save(e) {
+        e.preventDefault();
         if (!valid) return;
         const abs = Math.abs(value);
-        const bookDate = paid && date > today() ? today() : date;
-        const isPending = paid ? false : pending;
 
         if (isRecurring || repeat) {
             const [interval, every] = (repeat || 'month:1').split(':');
@@ -115,7 +116,7 @@ export default function TransactionSheet({
 
         if (transfer) {
             const tid = entry?.transfer?.from.transfer_id || newId();
-            const shared = { booking_date: bookDate, pending: isPending, counterparty: counterparty || (investing ? 'Investieren' : 'Umbuchung'), purpose, category: transferCategory, transfer_id: tid, recurring_id: entry?.recurring_id || null };
+            const shared = { booking_date: date, pending, counterparty: counterparty || (investing ? 'Investieren' : 'Umbuchung'), purpose, category: transferCategory, transfer_id: tid, recurring_id: entry?.recurring_id || null };
             return run(() => onSaveTransactions([
                 { ...shared, id: entry?.transfer?.from.id || `${tid}-out`, account_id: accountId, amount: -abs },
                 { ...shared, id: entry?.transfer?.to.id || `${tid}-in`, account_id: toAccountId, amount: abs },
@@ -125,8 +126,8 @@ export default function TransactionSheet({
         return run(() => onSaveTransactions([{
             id: entry?.id || newId(),
             account_id: accountId,
-            booking_date: bookDate,
-            pending: isPending,
+            booking_date: date,
+            pending,
             amount: kind === 'out' ? -abs : abs,
             counterparty,
             purpose,
@@ -141,8 +142,9 @@ export default function TransactionSheet({
         return run(() => onDeleteTransaction(entry.transfer ? { transfer_id: entry.transfer.from.transfer_id } : { id: entry.id }));
     }
 
-    const accountSelect = (value, onChange, exclude) => (
-        <select value={value} onChange={(e) => onChange(e.target.value)} className={`${inputClass} min-h-12 appearance-none`}>
+    // `compact`: narrower padding and text, for the account next to the name.
+    const accountSelect = (value, onChange, exclude, compact) => (
+        <select value={value} onChange={(e) => onChange(e.target.value)} className={`${compact ? compactInput : inputClass} min-h-12 appearance-none truncate`}>
             {accounts.filter((a) => a.id !== exclude).map((a) => <option key={a.id} value={a.id}>{a.name}</option>)}
         </select>
     );
@@ -153,29 +155,20 @@ export default function TransactionSheet({
         <>
             {canScan && scanner.button}
             {editing && (
-                <button
-                    type="button"
+                <DeleteButton
                     onClick={remove}
                     disabled={busy}
-                    aria-label={isRecurring ? 'Dauerauftrag beenden' : 'Löschen'}
-                    className={`flex h-9 items-center justify-center gap-1.5 rounded-full border text-sm font-medium ${confirmDelete ? 'border-expense bg-expense px-3 text-white' : 'w-9 border-line bg-card text-expense'}`}
-                >
-                    <Trash2 size={16} />{confirmDelete ? (isRecurring ? 'Beenden?' : 'Wirklich?') : ''}
-                </button>
+                    confirm={confirmDelete}
+                    confirmText={isRecurring ? 'Beenden?' : 'Wirklich?'}
+                    label={isRecurring ? 'Dauerauftrag beenden' : 'Löschen'}
+                />
             )}
-            <button
-                type="submit"
-                form="transaction-form"
-                disabled={busy || !valid}
-                className="h-9 rounded-full bg-ink px-4 text-sm font-medium text-paper disabled:opacity-40"
-            >
-                {busy ? 'Speichern …' : 'Speichern'}
-            </button>
+            <SaveButton form="transaction-form" disabled={!valid} busy={busy} />
         </>
     );
 
     return (
-        <Sheet title={title} action={headerActions} onClose={onClose} tall>
+        <Sheet title={title} action={headerActions} onClose={onClose}>
             <form id="transaction-form" onSubmit={save} className="space-y-4 pb-4">
                 {canScan && scanner.status}
 
@@ -196,7 +189,6 @@ export default function TransactionSheet({
                 <div className="flex items-baseline justify-center gap-2 py-2">
                     {!transfer && <span className={`text-4xl font-semibold ${kind === 'out' ? 'text-expense' : 'text-income'}`}>{kind === 'out' ? '−' : '+'}</span>}
                     <input
-                        autoFocus={!editing}
                         inputMode="decimal"
                         placeholder="0,00"
                         value={amount}
@@ -217,71 +209,68 @@ export default function TransactionSheet({
                     </div>
                 ) : (
                     <>
-                        <Field label={kind === 'out' ? 'Wo / an wen' : 'Von wem'}>
-                            <input
-                                list="counterparties"
-                                value={counterparty}
-                                onChange={(e) => setCounterparty(e.target.value)}
-                                placeholder={kind === 'out' ? 'z. B. REWE' : 'z. B. Arbeitgeber'}
-                                className={inputClass}
-                            />
-                            <datalist id="counterparties">
-                                {counterparties.map((c) => <option key={c} value={c} />)}
-                            </datalist>
-                        </Field>
+                        {/* Who and which account side by side */}
+                        <div className={`grid gap-2 ${accounts.length > 1 ? 'grid-cols-[3fr_2fr]' : ''}`}>
+                            <Field label={kind === 'out' ? 'Wo / an wen' : 'Von wem'}>
+                                <input
+                                    list="counterparties"
+                                    value={counterparty}
+                                    onChange={(e) => setCounterparty(e.target.value)}
+                                    placeholder={kind === 'out' ? 'z. B. REWE' : 'z. B. Arbeitgeber'}
+                                    className={inputClass}
+                                />
+                                <datalist id="counterparties">
+                                    {counterparties.map((c) => <option key={c} value={c} />)}
+                                </datalist>
+                            </Field>
+                            {accounts.length > 1 && <Field label="Konto">{accountSelect(accountId, setAccountId, null, true)}</Field>}
+                        </div>
 
-                        <Field label="Kategorie" group>
-                            <CategoryPicker
-                                options={options}
-                                value={shownCategory}
-                                picked={Boolean(category)}
-                                onPick={setCategory}
-                            />
-                        </Field>
+                        <div role="group" aria-label="Kategorie">
+                            <CategoryPicker options={options} value={shownCategory} onPick={setCategory} />
+                        </div>
                     </>
                 )}
 
-                <div className={`grid gap-3 ${!transfer && accounts.length > 1 ? 'grid-cols-2' : ''}`}>
+                {/* Date, repeat and paid in one row; with a repeat, its end takes the paid slot */}
+                <div className={`grid gap-2 ${rowCols}`}>
                     <Field label={isRecurring || repeat ? 'Erste Ausführung' : 'Datum'}>
-                        <input type="date" value={date} onChange={(e) => setDate(e.target.value)} className={inputClass} />
+                        <input type="date" value={date} onChange={(e) => setDate(e.target.value)} className={compactInput} />
                     </Field>
-                    {!transfer && accounts.length > 1 && <Field label="Konto">{accountSelect(accountId, setAccountId)}</Field>}
-                </div>
-
-                {(isRecurring || !editing) && (
-                    <div className={`grid gap-3 ${repeat ? 'grid-cols-2' : ''}`}>
+                    {showRepeat && (
                         <Field label="Wiederholen">
-                            <select value={repeat} onChange={(e) => setRepeat(e.target.value)} className={`${inputClass} min-h-12 appearance-none`}>
+                            <select value={repeat} onChange={(e) => setRepeat(e.target.value)} className={`${compactInput} min-h-12 appearance-none`}>
                                 {!isRecurring && <option value="">Nie</option>}
                                 {REPEATS.map(([v, label]) => <option key={v} value={v}>{label}</option>)}
                             </select>
                         </Field>
-                        {repeat && (
-                            <Field label="Ende (optional)">
-                                <input type="date" value={endDate} min={date} onChange={(e) => setEndDate(e.target.value)} className={inputClass} />
-                            </Field>
-                        )}
-                    </div>
-                )}
+                    )}
+                    {repeat ? (
+                        <Field label="Ende">
+                            <input type="date" value={endDate} min={date} onChange={(e) => setEndDate(e.target.value)} className={compactInput} />
+                        </Field>
+                    ) : (
+                        <Field label="Bezahlt" group>
+                            <div className="flex h-12 items-center justify-center rounded-2xl border border-line bg-card px-3">
+                                <Switch on={!pending} onChange={(paid) => setPending(!paid)} label="Bezahlt" />
+                            </div>
+                        </Field>
+                    )}
+                </div>
                 {repeat && !isRecurring && (
                     <p className="-mt-2 flex items-center gap-1.5 px-1 text-xs text-muted">
                         <Repeat size={12} /> Wird als Dauerauftrag gespeichert und automatisch gebucht.
                     </p>
                 )}
-                {!isRecurring && !repeat && (
-                    <>
-                        <Toggle
-                            on={pending}
-                            onChange={setPending}
-                            label="Noch nicht bezahlt"
-                            hint="Steht in den Umsätzen, zählt aber erst zum Kontostand, wenn du es als bezahlt markierst."
-                        />
-                        {!pending && date > today() && (
-                            <p className="-mt-2 flex items-center gap-1.5 px-1 text-xs text-muted">
-                                <Clock size={12} /> Liegt in der Zukunft: vorgemerkt, zählt ab dem {new Date(`${date}T00:00:00`).toLocaleDateString('de-DE', { day: 'numeric', month: 'long' })} zum Kontostand.
-                            </p>
-                        )}
-                    </>
+                {!repeat && pending && (
+                    <p className="-mt-2 flex items-center gap-1.5 px-1 text-xs text-muted">
+                        <Clock size={12} /> Noch nicht bezahlt: steht in den Umsätzen, zählt aber erst zum Kontostand, wenn du es als bezahlt markierst.
+                    </p>
+                )}
+                {!repeat && !pending && date > today() && (
+                    <p className="-mt-2 flex items-center gap-1.5 px-1 text-xs text-muted">
+                        <Clock size={12} /> Liegt in der Zukunft: vorgemerkt, zählt ab dem {new Date(`${date}T00:00:00`).toLocaleDateString('de-DE', { day: 'numeric', month: 'long' })} zum Kontostand.
+                    </p>
                 )}
                 {entry?.recurring_id && <p className="flex items-center gap-1.5 px-1 text-xs text-muted"><Repeat size={12} /> Von einem Dauerauftrag gebucht.</p>}
 
@@ -293,16 +282,6 @@ export default function TransactionSheet({
 
                 {error && <p className="text-sm text-expense">{error}</p>}
 
-                {entry && !isBooked(entry) && (
-                    <button
-                        type="button"
-                        onClick={() => save(null, true)}
-                        disabled={busy || !valid}
-                        className="flex w-full items-center justify-center gap-2 rounded-full border border-income bg-income/10 py-3 font-medium text-income disabled:opacity-40"
-                    >
-                        <Check size={18} /> Bezahlt{date > today() ? ' – heute abgebucht' : ''}
-                    </button>
-                )}
 
             </form>
         </Sheet>

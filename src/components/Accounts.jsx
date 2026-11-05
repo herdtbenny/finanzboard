@@ -1,17 +1,20 @@
 import { useState } from 'react';
-import { Download, LogOut, RefreshCw, Trash2 } from 'lucide-react';
+import { Download, LogOut, RefreshCw } from 'lucide-react';
 import { amountInput, money, newId, parseAmount, todayIso } from '../shared/format.js';
 import { exportCsv } from '../shared/exportCsv.js';
-import Sheet, { Field, inputClass } from './Sheet.jsx';
+import { isBooked, today } from '../shared/schedule.js';
+import Sheet, { DeleteButton, Field, inputClass, SaveButton } from './Sheet.jsx';
 import { Card, PageTitle } from './ui.jsx';
 import People, { Profile } from './People.jsx';
 import Categories from './Categories.jsx';
 
-export default function Accounts({ token, me, onMeChanged, accounts, balances, pending, transactions, categories, onSave, onDelete, onSaveTransactions, onSaveCategory, onDeleteCategory, onLogout }) {
+export default function Accounts({ token, me, onMeChanged, accounts, balances, transactions, categories, onSave, onDelete, onSaveTransactions, onSaveCategory, onDeleteCategory, onLogout }) {
     const [editing, setEditing] = useState(null);
     const [valuing, setValuing] = useState(null);
     const counts = {};
-    for (const t of transactions) counts[t.account_id] = (counts[t.account_id] || 0) + 1;
+    // Only what is booked; vorgemerkt isn't counted anywhere.
+    const now = today();
+    for (const t of transactions) if (isBooked(t, now)) counts[t.account_id] = (counts[t.account_id] || 0) + 1;
     const total = Object.values(balances).reduce((s, v) => s + v, 0);
 
     return (
@@ -32,7 +35,6 @@ export default function Accounts({ token, me, onMeChanged, accounts, balances, p
                                     <p className="truncate text-sm font-medium">{a.name}</p>
                                     <p className="text-[11px] text-muted">
                                         {a.kind === 'depot' ? 'Depot · Wert manuell' : `${counts[a.id] || 0} Umsätze`}
-                                        {Math.abs(pending[a.id]) > 0.005 && ` · vorgemerkt ${pending[a.id] > 0 ? '+' : ''}${money(pending[a.id])}`}
                                     </p>
                                 </div>
                                 <span className={`tabular text-sm font-semibold ${balances[a.id] < 0 ? 'text-expense' : ''}`}>{money(balances[a.id])}</span>
@@ -124,10 +126,19 @@ export function AccountSheet({ account, count, onSave, onDelete, onClose }) {
     }
 
     return (
-        <Sheet title={account.id ? 'Konto bearbeiten' : 'Neues Konto'} onClose={onClose}>
-            <form onSubmit={save} className="space-y-4 pb-4">
+        <Sheet
+            title={account.id ? 'Konto bearbeiten' : 'Neues Konto'}
+            onClose={onClose}
+            action={(
+                <>
+                    {account.id && <DeleteButton onClick={remove} disabled={busy} confirm={confirmDelete} confirmText="Mit allen Umsätzen?" />}
+                    <SaveButton form="account-form" disabled={!valid} busy={busy} />
+                </>
+            )}
+        >
+            <form id="account-form" onSubmit={save} className="space-y-4 pb-4">
                 <Field label="Name">
-                    <input autoFocus={!account.id} value={name} onChange={(e) => setName(e.target.value)} placeholder="z. B. VR Giro" className={inputClass} />
+                    <input value={name} onChange={(e) => setName(e.target.value)} placeholder="z. B. VR Giro" className={inputClass} />
                 </Field>
                 <Field label="Art" group>
                     <div className="grid grid-cols-2 rounded-full border border-line bg-card p-1">
@@ -154,22 +165,6 @@ export function AccountSheet({ account, count, onSave, onDelete, onClose }) {
                 </Field>
 
                 {error && <p className="text-sm text-expense">{error}</p>}
-
-                <div className="flex gap-2 pt-2">
-                    {account.id && (
-                        <button
-                            type="button"
-                            onClick={remove}
-                            disabled={busy}
-                            className={`flex items-center justify-center gap-2 rounded-full border px-4 py-3 text-sm font-medium ${confirmDelete ? 'border-expense bg-expense text-white' : 'border-line bg-card text-expense'}`}
-                        >
-                            <Trash2 size={16} />{confirmDelete ? 'Mit allen Umsätzen löschen?' : ''}
-                        </button>
-                    )}
-                    <button disabled={busy || !valid} className="flex-1 rounded-full bg-ink py-3 font-medium text-paper disabled:opacity-40">
-                        {busy ? 'Speichern …' : 'Speichern'}
-                    </button>
-                </div>
             </form>
         </Sheet>
     );
@@ -207,10 +202,10 @@ function DepotValueSheet({ account, balance, onSave, onClose }) {
     }
 
     return (
-        <Sheet title={`${account.name}: Wert`} onClose={onClose}>
-            <form onSubmit={save} className="space-y-4 pb-4">
+        <Sheet title={`${account.name}: Wert`} onClose={onClose} action={<SaveButton form="depot-form" disabled={!Number.isFinite(target)} busy={busy} />}>
+            <form id="depot-form" onSubmit={save} className="space-y-4 pb-4">
                 <Field label="Aktueller Depotwert">
-                    <input autoFocus inputMode="decimal" value={value} onChange={(e) => setValue(e.target.value.replace(/[^\d.,]/g, ''))} className={`${inputClass} tabular text-lg font-semibold`} />
+                    <input inputMode="decimal" value={value} onChange={(e) => setValue(e.target.value.replace(/[^\d.,]/g, ''))} className={`${inputClass} tabular text-lg font-semibold`} />
                 </Field>
                 <Field label="Stand vom">
                     <input type="date" value={date} onChange={(e) => setDate(e.target.value)} className={inputClass} />
@@ -221,9 +216,6 @@ function DepotValueSheet({ account, balance, onSave, onClose }) {
                     </p>
                 )}
                 {error && <p className="text-sm text-expense">{error}</p>}
-                <button disabled={busy || !Number.isFinite(target)} className="w-full rounded-full bg-ink py-3 font-medium text-paper disabled:opacity-40">
-                    {busy ? 'Speichern …' : 'Speichern'}
-                </button>
             </form>
         </Sheet>
     );
