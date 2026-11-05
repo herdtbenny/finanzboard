@@ -1,9 +1,9 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
-import { ChevronDown, Home } from 'lucide-react';
 import { api, Unauthorized } from '../api.js';
 import { categoryMemory, categoryOf, categoryOptions, setCustomCategories } from '../shared/categories.js';
 import { monthKey } from '../shared/format.js';
 import { balanceSeries, currentMonth } from '../shared/insights.js';
+import { isBooked, today } from '../shared/schedule.js';
 import Overview from './Overview.jsx';
 import Transactions from './Transactions.jsx';
 import Analysis from './Analysis.jsx';
@@ -13,7 +13,7 @@ import TransactionSheet from './TransactionSheet.jsx';
 
 const byDateDesc = (a, b) => b.booking_date.localeCompare(a.booking_date) || String(b.created_at).localeCompare(String(a.created_at));
 
-export default function Dashboard({ token, me, space, onSpace, onMeChanged, onLogout }) {
+export default function Dashboard({ token, me, onMeChanged, onLogout }) {
     const [data, setData] = useState(null);
     const [error, setError] = useState('');
     const [tab, setTab] = useState('overview');
@@ -32,12 +32,12 @@ export default function Dashboard({ token, me, space, onSpace, onMeChanged, onLo
     // Throws on errors so the sheets can show them; logs out on 401.
     const call = useCallback(async (path, opts) => {
         try {
-            return await api(path, token, { ...opts, space });
+            return await api(path, token, opts);
         } catch (e) {
             if (e instanceof Unauthorized) onLogout();
             throw e;
         }
-    }, [token, space, onLogout]);
+    }, [token, onLogout]);
 
     const load = useCallback(() => call('data').then(setData), [call]);
 
@@ -104,11 +104,24 @@ export default function Dashboard({ token, me, space, onSpace, onMeChanged, onLo
         () => (data?.transactions || []).map((t) => ({ ...t, amount: Number(t.amount), category: categoryOf(t) })),
         [data],
     );
-    const balances = useMemo(() => {
+    // Balances hold what is booked; vorgemerkt (not paid yet, or dated ahead)
+    // is summed up per account on its own.
+    const { balances, pending } = useMemo(() => {
+        const now = today();
         const b = Object.fromEntries(accounts.map((a) => [a.id, Number(a.opening_balance)]));
-        for (const t of transactions) if (t.account_id in b) b[t.account_id] += t.amount;
-        return b;
+        const p = Object.fromEntries(accounts.map((a) => [a.id, 0]));
+        for (const t of transactions) {
+            if (!(t.account_id in b)) continue;
+            if (isBooked(t, now)) b[t.account_id] += t.amount;
+            else p[t.account_id] += t.amount;
+        }
+        return { balances: b, pending: p };
     }, [accounts, transactions]);
+    // The month switches go as far as the latest booking, which may be ahead.
+    const lastMonth = useMemo(() => {
+        const latest = transactions[0] ? monthKey(transactions[0].booking_date) : '';
+        return latest > currentMonth() ? latest : currentMonth();
+    }, [transactions]);
     const series = useMemo(() => balanceSeries(accounts, transactions), [accounts, transactions]);
 
     // For the form: autocomplete names (most used first), the category last
@@ -139,25 +152,25 @@ export default function Dashboard({ token, me, space, onSpace, onMeChanged, onLo
     } else if (!data) {
         content = <p className="py-24 text-center text-muted">Lade …</p>;
     } else if (tab === 'overview') {
-        content = <Overview onNewAccount={() => setNewAccount(true)} accounts={accounts} balances={balances} series={series} transactions={transactions} month={month} onMonth={pickMonth} onOpen={setTxSheet} onAccount={openAccount} goTo={goTo} />;
+        content = <Overview onNewAccount={() => setNewAccount(true)} accounts={accounts} balances={balances} pending={pending} series={series} transactions={transactions} month={month} maxMonth={lastMonth} onMonth={pickMonth} onOpen={setTxSheet} onAccount={openAccount} goTo={goTo} />;
     } else if (tab === 'transactions') {
         content = (
             <Transactions
-                transactions={transactions} accounts={accounts} balances={balances} month={month} onMonth={pickMonth}
+                transactions={transactions} accounts={accounts} balances={balances} pending={pending} month={month} maxMonth={lastMonth} onMonth={pickMonth}
                 filter={category} onClearFilter={() => setCategory(null)} account={account} onAccount={setAccount} onOpen={setTxSheet}
             />
         );
     } else if (tab === 'analysis') {
         content = (
             <Analysis
-                transactions={transactions} accounts={accounts} recurrings={data.recurrings || []} month={month} onMonth={pickMonth}
+                transactions={transactions} accounts={accounts} recurrings={data.recurrings || []} month={month} maxMonth={lastMonth} onMonth={pickMonth}
                 onCategory={openCategory} onOpen={setTxSheet} onOpenRecurring={setRecurringSheet}
             />
         );
     } else {
         content = (
             <Accounts
-                token={token} me={me} onMeChanged={onMeChanged} accounts={accounts} balances={balances} transactions={transactions}
+                token={token} me={me} onMeChanged={onMeChanged} accounts={accounts} balances={balances} pending={pending} transactions={transactions}
                 categories={data.categories || []} onSave={saveAccount} onDelete={deleteAccount} onSaveTransactions={saveTransactions}
                 onSaveCategory={saveCategory} onDeleteCategory={deleteCategory} onLogout={onLogout}
             />
@@ -167,7 +180,6 @@ export default function Dashboard({ token, me, space, onSpace, onMeChanged, onLo
     // Without an account there is nothing to book on yet: + creates one first.
     return (
         <div className="mx-auto min-h-dvh max-w-2xl px-4 pt-safe pb-tabbar">
-            {me.spaces.length > 1 && <SpaceSwitch spaces={me.spaces} space={space} onSpace={onSpace} />}
             <main key={tab} className={slide}>{content}</main>
 
             {data && <TabBar tab={tab} onTab={goTo} onAdd={() => (accounts.length ? setTxSheet('new') : setNewAccount(true))} />}
@@ -191,24 +203,5 @@ export default function Dashboard({ token, me, space, onSpace, onMeChanged, onLo
 
             {newAccount && <AccountSheet account={{}} count={0} onSave={saveAccount} onDelete={deleteAccount} onClose={() => setNewAccount(false)} />}
         </div>
-    );
-}
-
-// Shown when the person belongs to several Haushalte.
-function SpaceSwitch({ spaces, space, onSpace }) {
-    return (
-        <label className="relative mb-3 inline-flex items-center gap-2 rounded-full border border-line bg-card py-2 pr-9 pl-3.5 text-sm font-medium">
-            <Home size={15} className="shrink-0" />
-            <select
-                value={space}
-                onChange={(e) => onSpace(e.target.value)}
-                aria-label="Haushalt"
-                className="absolute inset-0 cursor-pointer appearance-none opacity-0"
-            >
-                {spaces.map((s) => <option key={s.id} value={s.id}>{s.name}</option>)}
-            </select>
-            {spaces.find((s) => s.id === space)?.name}
-            <ChevronDown size={15} className="pointer-events-none absolute right-3" />
-        </label>
     );
 }

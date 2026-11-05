@@ -1,30 +1,20 @@
 @import "tailwindcss";
 
+/* Always dark, whatever the phone is set to. */
 @theme {
-  --color-paper: #fafaf9;
-  --color-card: #ffffff;
-  --color-ink: #111110;
-  --color-muted: #6b6b66;
-  --color-line: #e7e6e2;
-  --color-income: #0f8a74;
-  --color-expense: #c2410c;
+  --color-paper: #0c0c0b;
+  --color-card: #1a1a19;
+  --color-ink: #f2f2ef;
+  --color-muted: #9b9b95;
+  --color-line: #2c2c2a;
+  --color-income: #2a9d88;
+  --color-expense: #e0673a;
   --font-sans: "Geist Variable", ui-sans-serif, system-ui, -apple-system, sans-serif;
 }
 
-/* Dark mode: own steps, validated against the dark surface (not a flip). */
-@media (prefers-color-scheme: dark) {
-  :root {
-    --color-paper: #0c0c0b;
-    --color-card: #1a1a19;
-    --color-ink: #f2f2ef;
-    --color-muted: #9b9b95;
-    --color-line: #2c2c2a;
-    --color-income: #2a9d88;
-    --color-expense: #e0673a;
-  }
-}
-
-html { -webkit-text-size-adjust: 100%; overflow-x: clip; }
+/* Native controls (date picker, selects, scrollbars) dark too. No double-tap
+   zoom; pinch zoom is blocked in main.jsx and the viewport tag. */
+html { color-scheme: dark; -webkit-text-size-adjust: 100%; overflow-x: clip; touch-action: manipulation; }
 body {
   background: var(--color-paper);
   color: var(--color-ink);

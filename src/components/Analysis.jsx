@@ -7,7 +7,7 @@ import Recurrings from './Recurrings.jsx';
 import { accountNames, TransactionRow } from './Transactions.jsx';
 import { Bar, Card, CardHeader, MonthSwitch, PageTitle } from './ui.jsx';
 
-export default function Analysis({ transactions, accounts, recurrings, month, onMonth, onCategory, onOpen, onOpenRecurring }) {
+export default function Analysis({ transactions, accounts, recurrings, month, maxMonth, onMonth, onCategory, onOpen, onOpenRecurring }) {
     const summary = monthSummary(transactions, month);
     const avg = averageBefore(transactions, month);
     const cats = Object.entries(summary.byCategory).sort((a, b) => b[1] - a[1]);
@@ -19,7 +19,7 @@ export default function Analysis({ transactions, accounts, recurrings, month, on
     return (
         <div className="space-y-4">
             <PageTitle>Analyse</PageTitle>
-            <MonthSwitch month={month} onChange={onMonth} />
+            <MonthSwitch month={month} onChange={onMonth} max={maxMonth} />
 
             <MonthChart transactions={transactions} month={month} onSelect={onMonth} />
 

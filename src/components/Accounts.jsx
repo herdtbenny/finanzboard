@@ -7,7 +7,7 @@ import { Card, PageTitle } from './ui.jsx';
 import People, { Profile } from './People.jsx';
 import Categories from './Categories.jsx';
 
-export default function Accounts({ token, me, onMeChanged, accounts, balances, transactions, categories, onSave, onDelete, onSaveTransactions, onSaveCategory, onDeleteCategory, onLogout }) {
+export default function Accounts({ token, me, onMeChanged, accounts, balances, pending, transactions, categories, onSave, onDelete, onSaveTransactions, onSaveCategory, onDeleteCategory, onLogout }) {
     const [editing, setEditing] = useState(null);
     const [valuing, setValuing] = useState(null);
     const counts = {};
@@ -30,7 +30,10 @@ export default function Accounts({ token, me, onMeChanged, accounts, balances, t
                             <button onClick={() => setEditing(a)} className="flex min-w-0 flex-1 items-center gap-2.5 rounded-[18px] px-3 py-1.5 text-left active:bg-ink/5">
                                 <div className="min-w-0 flex-1">
                                     <p className="truncate text-sm font-medium">{a.name}</p>
-                                    <p className="text-[11px] text-muted">{a.kind === 'depot' ? 'Depot · Wert manuell' : `${counts[a.id] || 0} Umsätze`}</p>
+                                    <p className="text-[11px] text-muted">
+                                        {a.kind === 'depot' ? 'Depot · Wert manuell' : `${counts[a.id] || 0} Umsätze`}
+                                        {Math.abs(pending[a.id]) > 0.005 && ` · vorgemerkt ${pending[a.id] > 0 ? '+' : ''}${money(pending[a.id])}`}
+                                    </p>
                                 </div>
                                 <span className={`tabular text-sm font-semibold ${balances[a.id] < 0 ? 'text-expense' : ''}`}>{money(balances[a.id])}</span>
                             </button>

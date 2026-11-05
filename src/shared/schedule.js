@@ -4,6 +4,19 @@
 // Today in German time, as YYYY-MM-DD.
 export const today = () => new Date().toLocaleDateString('sv-SE', { timeZone: 'Europe/Berlin' });
 
+// How far ahead standing orders are booked: they show as vorgemerkt until
+// their day comes.
+export const AHEAD_DAYS = 31;
+
+export function addDays(iso, days) {
+    const [y, m, d] = iso.split('-').map(Number);
+    return new Date(Date.UTC(y, m - 1, d + days)).toISOString().slice(0, 10);
+}
+
+// A booking counts towards the balance once its day has come — unless it's
+// marked as not paid yet. Everything else is vorgemerkt.
+export const isBooked = (t, now = today()) => !t.pending && t.booking_date <= now;
+
 // The n-th occurrence (0 = start). Monthly and yearly orders keep the start
 // day, clamped to the month's last day (31 → 30 in April).
 export function occurrence(r, n) {
@@ -19,11 +32,16 @@ export function occurrence(r, n) {
     return first.toISOString().slice(0, 10);
 }
 
-export function nextOccurrence(r) {
-    for (let n = 0; n < 2000; n++) {
+// The first occurrence after `after` (or the very first without it), null
+// when the order has ended by then.
+export function occurrenceAfter(r, after) {
+    for (let n = 0; n < 5000; n++) {
         const date = occurrence(r, n);
         if (r.end_date && date > r.end_date) return null;
-        if (!r.last_date || date > r.last_date) return date;
+        if (!after || date > after) return date;
     }
     return null;
 }
+
+// The next occurrence not booked yet.
+export const nextOccurrence = (r) => occurrenceAfter(r, r.last_date);

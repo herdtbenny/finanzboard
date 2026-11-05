@@ -6,7 +6,7 @@ import { newId } from '../shared/format.js';
 import Sheet, { Field, inputClass } from './Sheet.jsx';
 import { Card, CardHeader } from './ui.jsx';
 
-// The Haushalt's own categories, plus the defaults to look at.
+// The person's own categories, plus the defaults to look at.
 export default function Categories({ categories, onSave, onDelete }) {
     const [editing, setEditing] = useState(null);
     const [showDefaults, setShowDefaults] = useState(false);

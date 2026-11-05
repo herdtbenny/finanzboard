@@ -1,4 +1,4 @@
-// Default categories for every Haushalt (each can add its own, see below). The form lists them sorted by how
+// Default categories for everyone (each person can add their own, see below). The form lists them sorted by how
 // often each was used; categories found in the data but missing here show up
 // there too.
 export const EXPENSE_CATEGORIES = [
@@ -7,7 +7,7 @@ export const EXPENSE_CATEGORIES = [
 ];
 export const INCOME_CATEGORIES = ['Gehalt & Jobs', 'Taschengeld', 'Verkäufe', 'Sonstiges'];
 
-// The Haushalt's own categories ({ id, name, kind: 'out' | 'in', icon }),
+// The person's own categories ({ id, name, kind: 'out' | 'in', icon }),
 // set once the data is loaded; everything below takes them into account.
 let custom = [];
 export function setCustomCategories(list) { custom = list || []; }

@@ -1,3 +1,5 @@
+import { addDays, today } from './schedule.js';
+
 // Always with cents — amounts are never rounded in the UI.
 const eur = new Intl.NumberFormat('de-DE', { style: 'currency', currency: 'EUR', minimumFractionDigits: 2, maximumFractionDigits: 2 });
 
@@ -17,11 +19,11 @@ export function shiftMonth(key, delta) {
 }
 
 export function dayLabel(iso) {
+    const now = today();
+    if (iso === now) return 'Heute';
+    if (iso === addDays(now, -1)) return 'Gestern';
+    if (iso === addDays(now, 1)) return 'Morgen';
     const d = new Date(`${iso}T00:00:00`);
-    const today = new Date();
-    const yesterday = new Date(Date.now() - 86400000);
-    if (d.toDateString() === today.toDateString()) return 'Heute';
-    if (d.toDateString() === yesterday.toDateString()) return 'Gestern';
     return d.toLocaleDateString('de-DE', { weekday: 'short', day: 'numeric', month: 'long' });
 }
 
@@ -34,10 +36,8 @@ export function relative(iso) {
     return new Date(iso).toLocaleDateString('de-DE', { day: 'numeric', month: 'short' });
 }
 
-export const todayIso = () => {
-    const d = new Date();
-    return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
-};
+// Today in German time, as YYYY-MM-DD.
+export { today as todayIso } from './schedule.js';
 
 // "1.234,5" / "1234.50" / "12,-" → number, NaN if unreadable.
 export function parseAmount(text) {

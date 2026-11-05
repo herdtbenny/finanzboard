@@ -1,11 +1,13 @@
 import { useState } from 'react';
-import { ArrowDown, Repeat, Trash2 } from 'lucide-react';
+import { ArrowDown, Check, Clock, Repeat, Trash2 } from 'lucide-react';
 import { categorize, FALLBACK, NEUTRAL_CATEGORIES } from '../shared/categories.js';
 import { amountInput, newId, parseAmount, todayIso } from '../shared/format.js';
+import { isBooked, today } from '../shared/schedule.js';
 import { REPEATS } from '../shared/repeat.js';
 import Sheet, { Field, inputClass } from './Sheet.jsx';
 import { useReceiptScanner } from './ReceiptScanner.jsx';
 import CategoryPicker from './CategoryPicker.jsx';
+import { Toggle } from './ui.jsx';
 
 const KINDS = [['out', 'Ausgabe', 'bg-expense text-white'], ['in', 'Einnahme', 'bg-income text-white'], ['transfer', 'Umbuchung', 'bg-ink text-paper']];
 
@@ -15,6 +17,8 @@ const KINDS = [['out', 'Ausgabe', 'bg-expense text-white'], ['in', 'Einnahme', '
 // A new entry with "Wiederholen" set becomes a standing order instead. Until a
 // category is tapped it follows what was typed: the category used most for
 // that name before, else the keyword rules.
+// "Noch nicht bezahlt" (pending) keeps an entry out of the balance until it's
+// marked as paid; a date ahead does the same until that day.
 export default function TransactionSheet({
     entry, recurring, accounts, lastAccountId, counterparties, memory, optionsFor,
     onSaveTransactions, onDeleteTransaction, onSaveRecurring, onDeleteRecurring, onClose,
@@ -35,6 +39,7 @@ export default function TransactionSheet({
     const [category, setCategory] = useState(src.category && !entry?.transfer ? src.category : null);
     const [repeat, setRepeat] = useState(recurring?.interval ? `${recurring.interval}:${recurring.every}` : isRecurring ? 'month:1' : '');
     const [endDate, setEndDate] = useState(recurring?.end_date || '');
+    const [pending, setPending] = useState(Boolean(entry?.pending));
     const [busy, setBusy] = useState(false);
     const [confirmDelete, setConfirmDelete] = useState(false);
     const [error, setError] = useState('');
@@ -55,7 +60,7 @@ export default function TransactionSheet({
     const valid = Number.isFinite(value) && value !== 0 && accountId && date && (!transfer || (toAccountId && toAccountId !== accountId));
     // Editing can't turn a transfer into a single booking or back.
     const kindLocked = (k) => editing && !isRecurring && (k === 'transfer') !== (initialKind === 'transfer');
-    const title = isRecurring ? (editing ? 'Dauerauftrag' : 'Neuer Dauerauftrag') : editing ? 'Bearbeiten' : 'Neuer Eintrag';
+    const title = isRecurring ? (editing ? 'Dauerauftrag' : 'Neuer Dauerauftrag') : editing ? 'Bearbeiten' : 'Neu';
 
     // A read receipt fills what it found; the category then follows the shop.
     function applyReceipt(r) {
@@ -81,10 +86,14 @@ export default function TransactionSheet({
         }
     }
 
-    function save(e) {
-        e.preventDefault();
+    // `paid`: the "Bezahlt" button — no longer pending, and a date ahead
+    // moves to today, when the money actually went.
+    function save(e, paid = false) {
+        e?.preventDefault();
         if (!valid) return;
         const abs = Math.abs(value);
+        const bookDate = paid && date > today() ? today() : date;
+        const isPending = paid ? false : pending;
 
         if (isRecurring || repeat) {
             const [interval, every] = (repeat || 'month:1').split(':');
@@ -106,7 +115,7 @@ export default function TransactionSheet({
 
         if (transfer) {
             const tid = entry?.transfer?.from.transfer_id || newId();
-            const shared = { booking_date: date, counterparty: counterparty || (investing ? 'Investieren' : 'Umbuchung'), purpose, category: transferCategory, transfer_id: tid, recurring_id: entry?.recurring_id || null };
+            const shared = { booking_date: bookDate, pending: isPending, counterparty: counterparty || (investing ? 'Investieren' : 'Umbuchung'), purpose, category: transferCategory, transfer_id: tid, recurring_id: entry?.recurring_id || null };
             return run(() => onSaveTransactions([
                 { ...shared, id: entry?.transfer?.from.id || `${tid}-out`, account_id: accountId, amount: -abs },
                 { ...shared, id: entry?.transfer?.to.id || `${tid}-in`, account_id: toAccountId, amount: abs },
@@ -116,7 +125,8 @@ export default function TransactionSheet({
         return run(() => onSaveTransactions([{
             id: entry?.id || newId(),
             account_id: accountId,
-            booking_date: date,
+            booking_date: bookDate,
+            pending: isPending,
             amount: kind === 'out' ? -abs : abs,
             counterparty,
             purpose,
@@ -137,9 +147,36 @@ export default function TransactionSheet({
         </select>
     );
 
+    // Delete and save sit in the sheet's top bar, next to the receipt scanner
+    // and the close button; save submits the form from outside it.
+    const headerActions = (
+        <>
+            {canScan && scanner.button}
+            {editing && (
+                <button
+                    type="button"
+                    onClick={remove}
+                    disabled={busy}
+                    aria-label={isRecurring ? 'Dauerauftrag beenden' : 'Löschen'}
+                    className={`flex h-9 items-center justify-center gap-1.5 rounded-full border text-sm font-medium ${confirmDelete ? 'border-expense bg-expense px-3 text-white' : 'w-9 border-line bg-card text-expense'}`}
+                >
+                    <Trash2 size={16} />{confirmDelete ? (isRecurring ? 'Beenden?' : 'Wirklich?') : ''}
+                </button>
+            )}
+            <button
+                type="submit"
+                form="transaction-form"
+                disabled={busy || !valid}
+                className="h-9 rounded-full bg-ink px-4 text-sm font-medium text-paper disabled:opacity-40"
+            >
+                {busy ? 'Speichern …' : 'Speichern'}
+            </button>
+        </>
+    );
+
     return (
-        <Sheet title={title} action={canScan ? scanner.button : null} onClose={onClose}>
-            <form onSubmit={save} className="space-y-4 pb-4">
+        <Sheet title={title} action={headerActions} onClose={onClose} tall>
+            <form id="transaction-form" onSubmit={save} className="space-y-4 pb-4">
                 {canScan && scanner.status}
 
                 <div className="grid grid-cols-3 rounded-full border border-line bg-card p-1">
@@ -231,6 +268,21 @@ export default function TransactionSheet({
                         <Repeat size={12} /> Wird als Dauerauftrag gespeichert und automatisch gebucht.
                     </p>
                 )}
+                {!isRecurring && !repeat && (
+                    <>
+                        <Toggle
+                            on={pending}
+                            onChange={setPending}
+                            label="Noch nicht bezahlt"
+                            hint="Steht in den Umsätzen, zählt aber erst zum Kontostand, wenn du es als bezahlt markierst."
+                        />
+                        {!pending && date > today() && (
+                            <p className="-mt-2 flex items-center gap-1.5 px-1 text-xs text-muted">
+                                <Clock size={12} /> Liegt in der Zukunft: vorgemerkt, zählt ab dem {new Date(`${date}T00:00:00`).toLocaleDateString('de-DE', { day: 'numeric', month: 'long' })} zum Kontostand.
+                            </p>
+                        )}
+                    </>
+                )}
                 {entry?.recurring_id && <p className="flex items-center gap-1.5 px-1 text-xs text-muted"><Repeat size={12} /> Von einem Dauerauftrag gebucht.</p>}
 
                 <Field label={transfer ? 'Bezeichnung (optional)' : 'Notiz (optional)'}>
@@ -241,21 +293,17 @@ export default function TransactionSheet({
 
                 {error && <p className="text-sm text-expense">{error}</p>}
 
-                <div className="flex gap-2 pt-2">
-                    {editing && (
-                        <button
-                            type="button"
-                            onClick={remove}
-                            disabled={busy}
-                            className={`flex items-center justify-center gap-2 rounded-full border px-5 py-3 text-sm font-medium ${confirmDelete ? 'border-expense bg-expense text-white' : 'border-line bg-card text-expense'}`}
-                        >
-                            <Trash2 size={16} />{confirmDelete ? (isRecurring ? 'Beenden?' : 'Wirklich?') : ''}
-                        </button>
-                    )}
-                    <button disabled={busy || !valid} className="flex-1 rounded-full bg-ink py-3 font-medium text-paper disabled:opacity-40">
-                        {busy ? 'Speichern …' : 'Speichern'}
+                {entry && !isBooked(entry) && (
+                    <button
+                        type="button"
+                        onClick={() => save(null, true)}
+                        disabled={busy || !valid}
+                        className="flex w-full items-center justify-center gap-2 rounded-full border border-income bg-income/10 py-3 font-medium text-income disabled:opacity-40"
+                    >
+                        <Check size={18} /> Bezahlt{date > today() ? ' – heute abgebucht' : ''}
                     </button>
-                </div>
+                )}
+
             </form>
         </Sheet>
     );

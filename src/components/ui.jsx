@@ -28,8 +28,9 @@ export function PageTitle({ children, right }) {
     );
 }
 
-// `compact` shortens the month ("Okt. 2026") where the row is shared.
-export function MonthSwitch({ month, onChange, compact }) {
+// `compact` shortens the month ("Okt. 2026") where the row is shared. `max`
+// is the last month to go to (one with vorgemerkte bookings may lie ahead).
+export function MonthSwitch({ month, onChange, compact, max = currentMonth() }) {
     const btn = 'flex size-9 items-center justify-center rounded-full active:bg-ink/5 disabled:opacity-25';
     return (
         <div className="inline-flex items-center gap-1 rounded-full border border-line bg-card p-0.5">
@@ -39,7 +40,7 @@ export function MonthSwitch({ month, onChange, compact }) {
             <span className={`text-center text-sm font-medium ${compact ? 'min-w-[4.5rem]' : 'min-w-[7.5rem]'}`}>
                 {compact ? monthLabel(month, { month: 'short', year: 'numeric' }) : monthLabel(month)}
             </span>
-            <button onClick={() => onChange(shiftMonth(month, 1))} disabled={month >= currentMonth()} aria-label="Nächster Monat" className={btn}>
+            <button onClick={() => onChange(shiftMonth(month, 1))} disabled={month >= max} aria-label="Nächster Monat" className={btn}>
                 <ChevronRight size={17} />
             </button>
         </div>
@@ -61,4 +62,19 @@ export function Bar({ value, marker, tone = 'bg-ink', thin }) {
 // A short tick on phones that support it (Android; iOS Safari has no API).
 export function haptic(ms = 8) {
     try { navigator.vibrate?.(ms); } catch { /* not supported */ }
+}
+
+// An on/off switch as a full-width row with a label and a hint.
+export function Toggle({ on, onChange, label, hint }) {
+    return (
+        <button type="button" role="switch" aria-checked={on} onClick={() => onChange(!on)} className="flex w-full items-center gap-3 rounded-2xl border border-line bg-card px-4 py-3 text-left">
+            <div className="min-w-0 flex-1">
+                <p className="text-sm font-medium">{label}</p>
+                {hint && <p className="text-xs text-muted">{hint}</p>}
+            </div>
+            <span className={`flex h-7 w-12 shrink-0 items-center rounded-full p-0.5 transition-colors ${on ? 'bg-ink' : 'bg-ink/15'}`}>
+                <span className={`size-6 rounded-full bg-paper shadow transition-transform ${on ? 'translate-x-5' : ''}`} />
+            </span>
+        </button>
+    );
 }

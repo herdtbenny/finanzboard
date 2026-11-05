@@ -1,17 +1,17 @@
-import { ACCOUNT_COLUMNS, db, TRANSACTION_COLUMNS } from './_lib.js';
+import { ACCOUNT_COLUMNS, session, TRANSACTION_COLUMNS } from './_lib.js';
 import { bookDue } from './_recurring.js';
 
-// Everything of the picked Haushalt: accounts, transactions, standing orders
-// and its own categories.
-// Due standing orders are booked first, so opening the app shows them right
-// away. Balances are computed in the browser, so this needs the full history.
+// Everything of the signed-in person: accounts, transactions, standing
+// orders and their own categories.
+// Standing orders are booked first (up to a month ahead, as vorgemerkt), so
+// opening the app shows them right away. Balances are computed in the browser, so this needs the full history.
 export default async function handler(req, res) {
-    const s = await db(req, res);
+    const s = await session(req, res);
     if (!s) return;
-    const { client, spaceId } = s;
+    const { client, userId } = s;
 
     try {
-        await bookDue(client, spaceId);
+        await bookDue(client, userId);
     } catch (e) {
         return res.status(500).json({ error: `Daueraufträge: ${e.message}` });
     }
@@ -20,7 +20,7 @@ export default async function handler(req, res) {
     const transactions = [];
     for (let from = 0; ; from += 1000) {
         const { data, error } = await client.from('transactions').select(TRANSACTION_COLUMNS)
-            .eq('space_id', spaceId)
+            .eq('user_id', userId)
             .order('booking_date', { ascending: false })
             .order('created_at', { ascending: false })
             .range(from, from + 999);
@@ -30,9 +30,9 @@ export default async function handler(req, res) {
     }
 
     const [accounts, recurrings, categories] = await Promise.all([
-        client.from('accounts').select(ACCOUNT_COLUMNS).eq('space_id', spaceId).order('sort_order').order('created_at'),
-        client.from('recurrings').select('*').eq('space_id', spaceId).order('created_at'),
-        client.from('categories').select('id,name,kind,icon').eq('space_id', spaceId).order('created_at'),
+        client.from('accounts').select(ACCOUNT_COLUMNS).eq('user_id', userId).order('sort_order').order('created_at'),
+        client.from('recurrings').select('*').eq('user_id', userId).order('created_at'),
+        client.from('categories').select('id,name,kind,icon').eq('user_id', userId).order('created_at'),
     ]);
     if (accounts.error) return res.status(500).json({ error: accounts.error.message });
 

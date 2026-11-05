@@ -4,7 +4,8 @@ import { X } from 'lucide-react';
 
 // Bottom sheet on phones, centred card on wide screens. Rendered into <body>
 // so an animated (transformed) page around it can't trap it under the tab bar.
-export default function Sheet({ title, action, onClose, children }) {
+// `tall` gives long forms most of the screen height.
+export default function Sheet({ title, action, onClose, tall, children }) {
     useEffect(() => {
         const onKey = (e) => e.key === 'Escape' && onClose();
         document.addEventListener('keydown', onKey);
@@ -16,15 +17,15 @@ export default function Sheet({ title, action, onClose, children }) {
     }, [onClose]);
 
     return createPortal(
-        <div className="fade-in fixed inset-0 z-30 flex items-end justify-center bg-black/40 backdrop-blur-[2px] sm:items-center" onClick={onClose}>
+        <div className="fade-in fixed inset-0 z-30 flex items-end justify-center bg-black/60 backdrop-blur-[2px] sm:items-center" onClick={onClose}>
             <div
                 onClick={(e) => e.stopPropagation()}
-                className="sheet-in pb-safe max-h-[92dvh] w-full max-w-lg overflow-y-auto rounded-t-[28px] bg-paper px-4 pt-3 sm:rounded-[28px]"
+                className={`sheet-in pb-safe w-full ${tall ? 'min-h-[88dvh] max-h-[96dvh] sm:min-h-0' : 'max-h-[92dvh]'} max-w-lg overflow-y-auto rounded-t-[28px] bg-paper px-4 pt-3 sm:rounded-[28px]`}
             >
                 <div className="mx-auto mb-3 h-1 w-10 rounded-full bg-line sm:hidden" />
-                <div className="mb-4 flex items-center justify-between">
-                    <h2 className="text-lg font-semibold">{title}</h2>
-                    <div className="flex items-center gap-2">
+                <div className="sticky top-0 z-10 -mx-4 mb-4 flex items-center justify-between gap-3 bg-paper px-4 py-1">
+                    <h2 className="min-w-0 truncate text-lg font-semibold">{title}</h2>
+                    <div className="flex shrink-0 items-center gap-2">
                         {action}
                         <button onClick={onClose} aria-label="Schließen" className="flex size-9 items-center justify-center rounded-full border border-line bg-card">
                             <X size={16} />

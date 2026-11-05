@@ -1,7 +1,9 @@
 import { isNeutral, isRefund } from './categories.js';
 import { monthKey, shiftMonth } from './format.js';
+import { isBooked, today } from './schedule.js';
 
-export const currentMonth = () => new Date().toISOString().slice(0, 7);
+// In German time: right after midnight on the 1st it's the new month already.
+export const currentMonth = () => today().slice(0, 7);
 
 // Income, expenses and expenses per category of one month. Transfers,
 // balance corrections and depot value changes are left out; refunds lower
@@ -48,14 +50,16 @@ export function averageBefore(transactions, key, n = 6) {
 }
 
 // Total balance at the end of each of the last `n` months (the current month
-// up to today). `transactions` is sorted newest first.
+// up to today). Only what is booked counts, nothing vorgemerkt.
 export function balanceSeries(accounts, transactions, n = 12) {
-    const now = currentMonth();
+    const day = today();
+    const now = day.slice(0, 7);
     const keys = Array.from({ length: n }, (_, i) => shiftMonth(now, i - (n - 1)));
     const opening = accounts.reduce((s, a) => s + Number(a.opening_balance), 0);
     const byMonth = {};
     let before = 0;
     for (const t of transactions) {
+        if (!isBooked(t, day)) continue;
         const k = monthKey(t.booking_date);
         if (k < keys[0]) before += t.amount;
         else byMonth[k] = (byMonth[k] || 0) + t.amount;

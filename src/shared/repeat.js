@@ -1,4 +1,4 @@
-import { nextOccurrence, today } from './schedule.js';
+import { occurrenceAfter, today } from './schedule.js';
 
 export const REPEATS = [
     ['week:1', 'Wöchentlich'],
@@ -19,6 +19,5 @@ export function repeatLabel(r) {
 
 // Next booking date still to come, or null when the order has run out.
 export function nextDate(r) {
-    const next = nextOccurrence(r);
-    return next && next > today() ? next : nextOccurrence({ ...r, last_date: today() });
+    return occurrenceAfter(r, today());
 }

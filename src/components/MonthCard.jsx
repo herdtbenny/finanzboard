@@ -4,12 +4,13 @@ import { money, monthLabel, shiftMonth } from '../shared/format.js';
 import { balanceChange, hasMonth, monthSummary, usualSaved } from '../shared/insights.js';
 import { isNeutral, isRefund } from '../shared/categories.js';
 import { monthKey } from '../shared/format.js';
+import { isBooked, today } from '../shared/schedule.js';
 import { Bar, Card, MonthSwitch } from './ui.jsx';
 
 // The chosen month in one card: income against expenses, the biggest
 // expense categories, and below them what was saved (with the savings rate)
 // compared with last month and with the six months before.
-export default function MonthCard({ transactions, month, onMonth, onAll }) {
+export default function MonthCard({ transactions, month, maxMonth, onMonth, onAll }) {
     const summary = monthSummary(transactions, month);
     const prevKey = shiftMonth(month, -1);
     const prev = hasMonth(transactions, prevKey) ? monthSummary(transactions, prevKey).net : null;
@@ -19,13 +20,15 @@ export default function MonthCard({ transactions, month, onMonth, onAll }) {
     const top = Object.entries(summary.byCategory).sort((a, b) => b[1] - a[1]).slice(0, 3);
     const scale = Math.max(summary.in, summary.out, 1);
 
-    // How many bookings stand behind income and expenses.
-    let nIn = 0;
-    let nOut = 0;
+    // How many bookings stand behind income and expenses, and how many of
+    // them are only vorgemerkt (they count in the month all the same).
+    const now = today();
+    const n = { in: 0, out: 0, inAhead: 0, outAhead: 0 };
     for (const t of transactions) {
         if (monthKey(t.booking_date) !== month || isNeutral(t)) continue;
-        if (t.amount > 0 && !isRefund(t)) nIn++;
-        else nOut++;
+        const side = t.amount > 0 && !isRefund(t) ? 'in' : 'out';
+        n[side]++;
+        if (!isBooked(t, now)) n[`${side}Ahead`]++;
     }
     const prevName = monthLabel(prevKey, { month: 'long' });
     const avgFrom = monthLabel(shiftMonth(month, -6), { month: 'short' }).replace('.', '');
@@ -35,13 +38,13 @@ export default function MonthCard({ transactions, month, onMonth, onAll }) {
         <Card>
             <div className="mb-4 flex items-center justify-between gap-2">
                 <h2 className="text-[15px] font-semibold">Monat</h2>
-                <MonthSwitch month={month} onChange={onMonth} compact />
+                <MonthSwitch month={month} onChange={onMonth} compact max={maxMonth} />
             </div>
 
             {/* Income − expenses = saved */}
             <div className="space-y-3">
-                <Flow label="Einnahmen" count={nIn} value={summary.in} share={summary.in / scale} tone="bg-income" />
-                <Flow label="Ausgaben" count={nOut} value={summary.out} share={summary.out / scale} tone="bg-expense" />
+                <Flow label="Einnahmen" count={n.in} ahead={n.inAhead} value={summary.in} share={summary.in / scale} tone="bg-income" />
+                <Flow label="Ausgaben" count={n.out} ahead={n.outAhead} value={summary.out} share={summary.out / scale} tone="bg-expense" />
             </div>
 
             {top.length > 0 && (
@@ -97,11 +100,11 @@ export default function MonthCard({ transactions, month, onMonth, onAll }) {
     );
 }
 
-function Flow({ label, count, value, share, tone }) {
+function Flow({ label, count, ahead, value, share, tone }) {
     return (
         <div>
             <div className="mb-1.5 flex items-baseline justify-between text-sm">
-                <span className="text-muted">{label} <span className="text-xs">· {count} {count === 1 ? 'Buchung' : 'Buchungen'}</span></span>
+                <span className="text-muted">{label} <span className="text-xs">· {count} {count === 1 ? 'Buchung' : 'Buchungen'}{ahead > 0 && `, ${ahead} vorgemerkt`}</span></span>
                 <span className="tabular text-base font-semibold">{money(value)}</span>
             </div>
             <div className="h-2 rounded-full bg-ink/[0.07]">

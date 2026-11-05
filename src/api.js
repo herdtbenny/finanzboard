@@ -1,5 +1,4 @@
 const KEY = 'finanzboard-token';
-const SPACE = 'finanzboard-space';
 
 // The session token stays in localStorage. It runs out after 7 days without
 // use; every answer brings a renewed one (see api/_lib.js), which replaces it.
@@ -11,19 +10,9 @@ export function saveToken(token) {
     try { token ? localStorage.setItem(KEY, token) : localStorage.removeItem(KEY); } catch { /* private mode */ }
 }
 
-// The Haushalt last opened on this device.
-export function loadSpace() {
-    try { return localStorage.getItem(SPACE) || ''; } catch { return ''; }
-}
-
-export function saveSpace(id) {
-    try { localStorage.setItem(SPACE, id); } catch { /* private mode */ }
-}
-
 export class Unauthorized extends Error {}
 
-// `space` picks the Haushalt the request works on (X-Space header).
-export async function api(path, token, { method = 'GET', body, space } = {}) {
+export async function api(path, token, { method = 'GET', body } = {}) {
     // The stored token is the freshest one; `token` is the fallback.
     if (token) token = loadToken() || token;
     const res = await fetch(`/api/${path}`, {
@@ -31,7 +20,6 @@ export async function api(path, token, { method = 'GET', body, space } = {}) {
         headers: {
             'Content-Type': 'application/json',
             ...(token ? { Authorization: `Bearer ${token}` } : {}),
-            ...(space ? { 'X-Space': space } : {}),
         },
         body: body ? JSON.stringify(body) : undefined,
     });

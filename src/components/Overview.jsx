@@ -5,16 +5,25 @@ import BalanceChart from './BalanceChart.jsx';
 import MonthCard from './MonthCard.jsx';
 import { accountNames, TransactionRow } from './Transactions.jsx';
 import { mergeTransfers } from '../shared/transfers.js';
+import { isBooked, today } from '../shared/schedule.js';
 import { Card, CardHeader } from './ui.jsx';
 
-export default function Overview({ accounts, balances, series, transactions, month, onMonth, onOpen, onAccount, onNewAccount, goTo }) {
+const SOON = 5;
+
+export default function Overview({ accounts, balances, pending, series, transactions, month, maxMonth, onMonth, onOpen, onAccount, onNewAccount, goTo }) {
     const [point, setPoint] = useState(null);
+    const [allAhead, setAllAhead] = useState(false);
     const total = series[series.length - 1].value;
-    const recent = mergeTransfers(transactions).slice(0, 5);
     const names = accountNames(accounts);
     // Bars share what's on the plus side, so a credit card in the red
     // doesn't push the others past 100 %.
     const positive = accounts.reduce((s, a) => s + Math.max(0, balances[a.id]), 0);
+    // Booked entries for "Zuletzt"; vorgemerkte on their own, soonest first.
+    const now = today();
+    const merged = mergeTransfers(transactions);
+    const recent = merged.filter((t) => isBooked(t, now)).slice(0, 5);
+    const ahead = merged.filter((t) => !isBooked(t, now)).reverse();
+    const pendingTotal = Object.values(pending).reduce((s, v) => s + v, 0);
 
     return (
         <div className="space-y-4">
@@ -24,6 +33,11 @@ export default function Overview({ accounts, balances, series, transactions, mon
                     <p className="text-sm opacity-60">{point ? `Ende ${monthLabel(point.key)}` : 'Gesamtvermögen'}</p>
                     <p className="tabular text-2xl leading-none font-semibold tracking-tight">{money(point ? point.value : total)}</p>
                 </div>
+                {!point && Math.abs(pendingTotal) > 0.005 && (
+                    <p className="tabular mt-1 text-right text-[11px] opacity-60">
+                        vorgemerkt {pendingTotal > 0 ? '+' : ''}{money(pendingTotal)} → danach {money(total + pendingTotal)}
+                    </p>
+                )}
                 <div className="mt-3">
                     <BalanceChart series={series} onActive={setPoint} />
                 </div>
@@ -65,7 +79,27 @@ export default function Overview({ accounts, balances, series, transactions, mon
                 </div>
             </section>
 
-            <MonthCard transactions={transactions} month={month} onMonth={onMonth} onAll={() => goTo('analysis')} />
+            <MonthCard transactions={transactions} month={month} maxMonth={maxMonth} onMonth={onMonth} onAll={() => goTo('analysis')} />
+
+            {ahead.length > 0 && (
+                <Card className="px-2 pb-2">
+                    <div className="px-3">
+                        <div className="mb-1 flex items-baseline justify-between gap-3">
+                            <h2 className="text-[15px] font-semibold">Vorgemerkt</h2>
+                            <span className="tabular text-sm font-semibold">{pendingTotal > 0 ? '+' : ''}{money(pendingTotal)}</span>
+                        </div>
+                        <p className="mb-2 text-xs text-muted">Noch nicht vom Konto abgebucht – zählt erst ab dem Tag oder wenn du es als bezahlt markierst.</p>
+                    </div>
+                    <ul>
+                        {(allAhead ? ahead : ahead.slice(0, SOON)).map((t) => <TransactionRow key={t.id} t={t} onOpen={onOpen} names={names} showDate />)}
+                    </ul>
+                    {ahead.length > SOON && (
+                        <button onClick={() => setAllAhead(!allAhead)} className="w-full rounded-full py-2 text-sm text-muted active:bg-ink/5">
+                            {allAhead ? 'Weniger' : `Alle ${ahead.length} anzeigen`}
+                        </button>
+                    )}
+                </Card>
+            )}
 
             <Card className="px-2 pb-2">
                 <div className="px-3"><CardHeader title="Zuletzt" action={recent.length ? 'Alle' : null} onAction={() => goTo('transactions')} /></div>

@@ -1,9 +1,10 @@
 import { useMemo, useState } from 'react';
-import { ArrowLeftRight, ChevronDown, Repeat, Search, TrendingUp, X } from 'lucide-react';
+import { ArrowLeftRight, ChevronDown, Clock, Repeat, Search, TrendingUp, X } from 'lucide-react';
 import { CategoryIcon } from '../shared/categoryIcons.jsx';
 import { dayLabel, money, monthKey } from '../shared/format.js';
 import { isNeutral, isRefund } from '../shared/categories.js';
 import { mergeTransfers, transferTitle } from '../shared/transfers.js';
+import { isBooked } from '../shared/schedule.js';
 import { MonthSwitch, PageTitle } from './ui.jsx';
 
 const PAGE = 80;
@@ -11,7 +12,8 @@ const PAGE = 80;
 // One line in a list. A merged transfer shows "from → to" and its amount
 // without sign. In one account's statement a transfer shows as its half
 // (`t.whole` = the merged transfer): signed, with where the money went to
-// or came from; tapping it opens the whole transfer.
+// or came from; tapping it opens the whole transfer. Vorgemerkt (not paid
+// yet, or dated ahead) shows with a clock and a lighter amount.
 export function TransactionRow({ t, onOpen, showDate, names }) {
     const whole = t.transfer ? t : t.whole;
     const isTransfer = Boolean(whole);
@@ -20,7 +22,9 @@ export function TransactionRow({ t, onOpen, showDate, names }) {
     let where = t.category;
     if (isHalf) where = t.amount < 0 ? `→ an ${names[whole.transfer.to.account_id]}` : `← von ${names[whole.transfer.from.account_id]}`;
     else if (isTransfer) where = `${names[whole.transfer.from.account_id]} → ${names[whole.transfer.to.account_id]}`;
+    const booked = isBooked(t);
     const sub = [
+        !booked && (t.pending ? 'Nicht bezahlt' : 'Vorgemerkt'),
         where,
         showDate && dayLabel(t.booking_date),
         !isTransfer && names.__multi && names[t.account_id],
@@ -42,10 +46,11 @@ export function TransactionRow({ t, onOpen, showDate, names }) {
                     <p className="flex items-center gap-1.5 truncate text-[15px] font-medium">
                         <span className="truncate">{title}</span>
                         {t.recurring_id && <Repeat size={12} className="shrink-0 text-muted" aria-label="Dauerauftrag" />}
+                        {!booked && <Clock size={12} className="shrink-0 text-muted" aria-label="Vorgemerkt" />}
                     </p>
                     <p className="truncate text-xs text-muted">{sub}</p>
                 </div>
-                <p className={`tabular shrink-0 text-[15px] font-semibold ${amountClass}`}>
+                <p className={`tabular shrink-0 text-[15px] font-semibold ${amountClass} ${booked ? '' : 'opacity-55'}`}>
                     {(!isTransfer || isHalf) && t.amount > 0 ? '+' : ''}{money(t.amount)}
                 </p>
             </button>
@@ -60,7 +65,7 @@ export function accountNames(accounts) {
 // Searching looks through all months. Without an account filter, transfers
 // show as one entry; with one, the list is that account's statement: each
 // half of a transfer with its sign, plus the balance.
-export default function Transactions({ transactions, accounts, balances, month, onMonth, filter, onClearFilter, account, onAccount, onOpen }) {
+export default function Transactions({ transactions, accounts, balances, pending, month, maxMonth, onMonth, filter, onClearFilter, account, onAccount, onOpen }) {
     const [query, setQuery] = useState('');
     // 'all' | 'out' | 'in'
     const [type, setType] = useState('all');
@@ -124,7 +129,7 @@ export default function Transactions({ transactions, accounts, balances, month, 
 
             {/* Month and account side by side; the account pill takes the rest of the row */}
             <div className="flex items-center gap-2">
-                {!q && <div className="shrink-0"><MonthSwitch month={month} onChange={onMonth} compact /></div>}
+                {!q && <div className="shrink-0"><MonthSwitch month={month} onChange={onMonth} compact max={maxMonth} /></div>}
                 {accounts.length > 1 && (
                     <label className={`relative flex min-w-0 flex-1 items-center rounded-full border ${account ? 'border-ink bg-ink text-paper' : 'border-line bg-card'}`}>
                         <select
@@ -170,7 +175,12 @@ export default function Transactions({ transactions, accounts, balances, month, 
                         </>
                     )}
                 </span>
-                {account && <span>Kontostand <span className="tabular font-semibold text-ink">{money(balances[account])}</span></span>}
+                {account && (
+                    <span>
+                        Kontostand <span className="tabular font-semibold text-ink">{money(balances[account])}</span>
+                        {Math.abs(pending[account]) > 0.005 && <> · vorgemerkt <span className="tabular font-medium">{pending[account] > 0 ? '+' : ''}{money(pending[account])}</span></>}
+                    </span>
+                )}
             </p>
 
             {!list.length && <p className="py-12 text-center text-sm text-muted">{q ? 'Nichts gefunden.' : 'Keine Umsätze in diesem Monat.'}</p>}

@@ -19,7 +19,7 @@ export default function Recurrings({ recurrings, accounts, onOpen }) {
     return (
         <Card className="px-2 pb-2">
             <div className="px-3"><CardHeader title="Daueraufträge" action="Neu" onAction={() => onOpen({})} /></div>
-            {!rows.length && <p className="px-3 pb-3 text-sm text-muted">Noch keine. Wiederkehrende Zahlungen werden automatisch gebucht.</p>}
+            {!rows.length && <p className="px-3 pb-3 text-sm text-muted">Noch keine. Wiederkehrende Zahlungen werden automatisch gebucht und einen Monat vorher vorgemerkt.</p>}
             <ul>
                 {rows.map((r) => (
                     <li key={r.id}>

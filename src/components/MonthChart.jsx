@@ -1,13 +1,16 @@
 import { money, monthLabel, shiftMonth } from '../shared/format.js';
-import { monthSummary } from '../shared/insights.js';
+import { currentMonth, monthSummary } from '../shared/insights.js';
 
 const MONTHS = 6;
 
 // Income vs. expenses for six months; tapping a month selects it for the
 // whole page. The selected month is drawn at full strength, the rest muted.
+// Ends with the current month, or with the chosen one when it lies ahead.
 export default function MonthChart({ transactions, month, onSelect }) {
-    const now = new Date().toISOString().slice(0, 7);
-    const end = month < shiftMonth(now, -(MONTHS - 1)) ? shiftMonth(month, MONTHS - 1) : now;
+    const now = currentMonth();
+    let end = now;
+    if (month > now) end = month;
+    else if (month < shiftMonth(now, -(MONTHS - 1))) end = shiftMonth(month, MONTHS - 1);
     const keys = Array.from({ length: MONTHS }, (_, i) => shiftMonth(end, i - (MONTHS - 1)));
 
     const totals = Object.fromEntries(keys.map((k) => [k, monthSummary(transactions, k)]));
