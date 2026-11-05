@@ -115,7 +115,10 @@ export function AccountSheet({ account, count, onSave, onDelete, onClose }) {
             id: account.id || newId(),
             name,
             kind,
-            opening_balance: negative ? -Math.abs(value) : Math.abs(value),
+            // A depot's value is set via "Wert aktualisieren", not here.
+            opening_balance: kind === 'depot'
+                ? (account.id && account.kind === 'depot' ? Number(account.opening_balance) || 0 : 0)
+                : negative ? -Math.abs(value) : Math.abs(value),
             sort_order: account.id ? account.sort_order : count,
         }));
     }
@@ -154,7 +157,7 @@ export function AccountSheet({ account, count, onSave, onDelete, onClose }) {
                         </span>
                     )}
                 </Field>
-                <Field label="Anfangssaldo" group>
+                {kind !== 'depot' && <Field label="Anfangssaldo" group>
                     <div className="flex gap-2">
                         <button type="button" onClick={() => setNegative(!negative)} aria-label="Vorzeichen wechseln" className="w-12 shrink-0 rounded-full border border-line bg-card text-lg font-semibold">
                             {negative ? '−' : '+'}
@@ -162,7 +165,7 @@ export function AccountSheet({ account, count, onSave, onDelete, onClose }) {
                         <input inputMode="decimal" value={opening} onChange={(e) => setOpening(e.target.value.replace(/[^\d.,]/g, ''))} placeholder="0,00" className={`${inputClass} tabular`} />
                     </div>
                     <span className="mt-1 block px-1 text-xs text-muted">Der Kontostand an dem Tag, ab dem du Umsätze einträgst.</span>
-                </Field>
+                </Field>}
 
                 {error && <p className="text-sm text-expense">{error}</p>}
             </form>
