@@ -2,7 +2,7 @@ import { useMemo, useState } from 'react';
 import { ArrowLeftRight, ChevronDown, Clock, Repeat, Search, TrendingUp, X } from 'lucide-react';
 import { CategoryIcon } from '../shared/categoryIcons.jsx';
 import { dayLabel, money, monthKey } from '../shared/format.js';
-import { isNeutral, isRefund } from '../shared/categories.js';
+import { isNeutral } from '../shared/categories.js';
 import { mergeTransfers, transferTitle } from '../shared/transfers.js';
 import { bookingsFor, isBooked, occurrencesIn } from '../shared/schedule.js';
 import { MonthSwitch, PageTitle } from './ui.jsx';
@@ -94,12 +94,11 @@ export default function Transactions({ transactions, recurrings, accounts, balan
     }, [all, account]);
     const list = useMemo(() => {
         // Transfers and corrections are neither; they only show under "Alle".
-        // Refunds belong to the expenses they lower.
+        // Every plus is income, every minus an expense.
         const ofType = (t) => {
             if (type === 'all') return true;
             if (t.transfer || t.whole || isNeutral(t)) return false;
-            const income = t.amount > 0 && !isRefund(t);
-            return type === 'in' ? income : !income;
+            return type === 'in' ? t.amount > 0 : t.amount < 0;
         };
         if (q) return base.filter((t) => ofType(t) && `${t.counterparty} ${t.purpose} ${t.category} ${String(Math.abs(t.amount)).replace('.', ',')}`.toLowerCase().includes(q));
         return base.filter((t) => ofType(t) && monthKey(t.booking_date) === month && (!filter || t.category === filter));
@@ -114,14 +113,14 @@ export default function Transactions({ transactions, recurrings, accounts, balan
         if (last?.date === t.booking_date) { last.items.push(t); last.sum += value; } else days.push({ date: t.booking_date, items: [t], sum: value });
     }
     // The line above the list: income and expenses, reckoned like the month
-    // card (transfers and corrections left out, refunds lower expenses); in
+    // card (transfers and corrections left out); in
     // an account's statement, how much that account changed instead.
     let income = 0;
     let expenses = 0;
     for (const t of list) {
         if (!counts(t)) continue;
         if (t.transfer || t.whole || isNeutral(t)) continue;
-        if (t.amount > 0 && !isRefund(t)) income += t.amount;
+        if (t.amount > 0) income += t.amount;
         else expenses -= t.amount;
     }
     const bookedCount = list.filter(counts).length;

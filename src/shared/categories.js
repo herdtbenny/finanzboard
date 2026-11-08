@@ -22,9 +22,8 @@ export const incomeCategories = () => [...INCOME_CATEGORIES.slice(0, -1), ...own
 export const NEUTRAL_CATEGORIES = ['Umbuchung', 'Investieren', 'Kontostand', 'Wertänderung'];
 export const isNeutral = (t) => NEUTRAL_CATEGORIES.includes(t.category);
 
-// Money coming back in an expense category (a refund, a friend paying their
-// share) lowers that category's spending instead of counting as income.
-export const isRefund = (t) => t.amount > 0 && !incomeCategories().includes(t.category) && !isNeutral(t);
+// Everything else is simple: money in is income, money out is expense —
+// also money coming back under an expense category (a friend's share).
 
 // Keyword rules for names never used before, matched against counterparty +
 // purpose (case-insensitive; keywords up to 3 letters only as whole words).
@@ -84,8 +83,8 @@ export function categoryMemory(transactions) {
 }
 
 // Categories for the form, most used first. Expenses: only expense
-// categories. Income: the income categories, then the expense ones — money
-// back under an expense category is a refund and lowers that category.
+// categories. Income: the income categories, then the expense ones (e.g. a
+// friend's share for a gift) — it still counts as income.
 export function categoryOptions(transactions, kind) {
     const usage = {};
     for (const t of transactions) {

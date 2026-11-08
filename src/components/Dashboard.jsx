@@ -97,7 +97,7 @@ export default function Dashboard({ token, me, onMeChanged, onLogout }) {
         if (account === id) setAccount(null);
     }
 
-    // Own categories first: icons, chips and refunds all depend on them.
+    // Own categories first: icons and chips depend on them.
     setCustomCategories(data?.categories);
     const accounts = useMemo(() => data?.accounts || [], [data]);
     const transactions = useMemo(

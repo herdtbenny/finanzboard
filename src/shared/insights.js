@@ -1,4 +1,4 @@
-import { isNeutral, isRefund } from './categories.js';
+import { isNeutral } from './categories.js';
 import { monthKey, shiftMonth } from './format.js';
 import { isBooked, today } from './schedule.js';
 
@@ -6,8 +6,8 @@ import { isBooked, today } from './schedule.js';
 export const currentMonth = () => today().slice(0, 7);
 
 // Income, expenses and expenses per category of one month. Transfers,
-// balance corrections and depot value changes are left out; refunds lower
-// their category's expenses; `invested` is what went into a depot. Only what
+// balance corrections and depot value changes are left out; every plus is
+// income, every minus an expense; `invested` is what went into a depot. Only what
 // is booked counts — vorgemerkt (not paid yet, or dated ahead) shows in the
 // list of transactions and nowhere else.
 export function monthSummary(transactions, key) {
@@ -17,15 +17,12 @@ export function monthSummary(transactions, key) {
         if (monthKey(t.booking_date) !== key || !isBooked(t, now)) continue;
         if (t.category === 'Investieren' && t.amount > 0) s.invested += t.amount;
         if (isNeutral(t)) continue;
-        if (t.amount > 0 && !isRefund(t)) s.in += t.amount;
+        if (t.amount > 0) s.in += t.amount;
         else {
             s.out -= t.amount;
             s.byCategory[t.category] = (s.byCategory[t.category] || 0) - t.amount;
         }
     }
-    // A category can end up at zero or below when refunds outweigh it.
-    for (const [c, v] of Object.entries(s.byCategory)) if (v <= 0.005) delete s.byCategory[c];
-    s.out = Math.max(0, s.out);
     s.net = s.in - s.out;
     s.rate = s.in > 0 ? s.net / s.in : null;
     return s;

@@ -47,7 +47,7 @@ export default function TransactionSheet({
     const transfer = kind === 'transfer';
     const value = parseAmount(amount);
     // Only categories of the chosen direction; an existing entry keeps its own
-    // (e.g. a refund booked under an expense category).
+    // (e.g. a friend's share booked under an expense category).
     const kindOptions = transfer ? [] : optionsFor(kind);
     const remembered = memory[counterparty.trim().toLowerCase()];
     const guess = kindOptions.includes(remembered) ? remembered : categorize({ counterparty, purpose }, kindOptions);

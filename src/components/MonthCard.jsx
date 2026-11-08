@@ -2,7 +2,7 @@ import { ArrowDownRight, ArrowUpRight } from 'lucide-react';
 import { CategoryIcon } from '../shared/categoryIcons.jsx';
 import { money, monthLabel, shiftMonth } from '../shared/format.js';
 import { balanceChange, hasMonth, monthSummary, usualSaved } from '../shared/insights.js';
-import { isNeutral, isRefund } from '../shared/categories.js';
+import { isNeutral } from '../shared/categories.js';
 import { monthKey } from '../shared/format.js';
 import { isBooked, today } from '../shared/schedule.js';
 import { Bar, Card, MonthSwitch } from './ui.jsx';
@@ -26,7 +26,7 @@ export default function MonthCard({ transactions, month, maxMonth, onMonth, onAl
     const n = { in: 0, out: 0 };
     for (const t of transactions) {
         if (monthKey(t.booking_date) !== month || isNeutral(t) || !isBooked(t, now)) continue;
-        const side = t.amount > 0 && !isRefund(t) ? 'in' : 'out';
+        const side = t.amount > 0 ? 'in' : 'out';
         n[side]++;
     }
     const prevName = monthLabel(prevKey, { month: 'long' });
