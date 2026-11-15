@@ -48,7 +48,7 @@ export default async function handler(req, res) {
             if (b.password) {
                 if (String(b.password).length < 6) return fail('Mindestens 6 Zeichen');
                 patch.password_hash = hashPassword(b.password);
-                patch.token_version = user.token_version + 1;
+                patch.token_version = (user.token_version || 0) + 1;
             }
             const { error } = await client.from('users').update(patch).eq('id', b.id);
             return error ? fail(error.message, 500) : res.status(200).json({ ok: true });

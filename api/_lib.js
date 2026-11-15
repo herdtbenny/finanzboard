@@ -70,7 +70,8 @@ export async function session(req, res) {
     }
     const token = readToken(req);
     const { data: user } = token ? await client.from('users').select('id,name,is_admin,token_version').eq('id', token.userId).maybeSingle() : { data: null };
-    if (!user || user.token_version !== token.version) {
+    // A missing token_version (null) counts as 0, as in makeToken.
+    if (!user || (user.token_version || 0) !== token.version) {
         res.status(401).json({ error: 'Nicht angemeldet' });
         return null;
     }

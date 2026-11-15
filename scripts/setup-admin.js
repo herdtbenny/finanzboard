@@ -23,7 +23,7 @@ const hash = `scrypt$${salt}$${crypto.scryptSync(password, salt, 64).toString('b
 
 let user = must(await db.from('users').select('id,token_version').ilike('name', name.replace(/[\\%_]/g, (c) => `\\${c}`)).maybeSingle());
 if (user) {
-    must(await db.from('users').update({ password_hash: hash, is_admin: true, token_version: user.token_version + 1 }).eq('id', user.id));
+    must(await db.from('users').update({ password_hash: hash, is_admin: true, token_version: (user.token_version || 0) + 1 }).eq('id', user.id));
 } else {
     user = { id: crypto.randomUUID() };
     must(await db.from('users').insert({ id: user.id, name, password_hash: hash, is_admin: true }));
