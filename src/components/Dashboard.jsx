@@ -34,7 +34,7 @@ export default function Dashboard({ token, me, onMeChanged, onLogout }) {
         try {
             return await api(path, token, opts);
         } catch (e) {
-            if (e instanceof Unauthorized) onLogout();
+            if (e instanceof Unauthorized) onLogout(e.message);
             throw e;
         }
     }, [token, onLogout]);

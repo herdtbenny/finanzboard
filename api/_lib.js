@@ -43,14 +43,17 @@ export function makeToken(user) {
     return `${payload}.${sign(payload)}`;
 }
 
+// { userId, version } for a valid token, otherwise { reason } — the reason
+// goes back with the 401 so a failed sign-in can be told apart on the device.
 function readToken(req) {
     const auth = req.headers.authorization || '';
-    if (!auth.startsWith('Bearer ') || !process.env.DASHBOARD_SESSION_SECRET) return null;
+    if (!process.env.DASHBOARD_SESSION_SECRET) return { reason: 'Server: DASHBOARD_SESSION_SECRET fehlt' };
+    if (!auth.startsWith('Bearer ')) return { reason: 'kein Token mitgeschickt' };
     const [userId, version, exp, sig] = auth.slice(7).split('.');
-    if (!userId || !version || !exp || !sig) return null;
+    if (!userId || !version || !exp || !sig) return { reason: 'Token-Format' };
     const expected = sign(`${userId}.${version}.${exp}`);
-    if (sig.length !== expected.length || !crypto.timingSafeEqual(Buffer.from(sig), Buffer.from(expected))) return null;
-    return Number(exp) > Date.now() ? { userId, version: Number(version) } : null;
+    if (sig.length !== expected.length || !crypto.timingSafeEqual(Buffer.from(sig), Buffer.from(expected))) return { reason: 'Signatur passt nicht' };
+    return Number(exp) > Date.now() ? { userId, version: Number(version) } : { reason: 'Token abgelaufen' };
 }
 
 // Vercel cron calls carry `Bearer CRON_SECRET`.
@@ -68,13 +71,15 @@ export async function session(req, res) {
         res.status(500).json({ error: 'Supabase ist nicht konfiguriert' });
         return null;
     }
+    const deny = (reason) => { res.status(401).json({ error: 'Nicht angemeldet', reason }); return null; };
     const token = readToken(req);
-    const { data: user } = token ? await client.from('users').select('id,name,is_admin,token_version').eq('id', token.userId).maybeSingle() : { data: null };
-    // A missing token_version (null) counts as 0, as in makeToken.
-    if (!user || (user.token_version || 0) !== token.version) {
-        res.status(401).json({ error: 'Nicht angemeldet' });
-        return null;
-    }
+    if (token.reason) return deny(token.reason);
+    const { data: user, error } = await client.from('users').select('id,name,is_admin,token_version').eq('id', token.userId).maybeSingle();
+    if (error) return deny(`Datenbank: ${error.message}`);
+    if (!user) return deny('Nutzer nicht gefunden');
+    // As a number, and a missing one (null) counts as 0, as in makeToken.
+    const version = Number(user.token_version || 0);
+    if (version !== token.version) return deny(`Token-Version ${token.version}, Datenbank ${JSON.stringify(user.token_version)}`);
     res.setHeader('X-Session-Token', makeToken(user));
     return { client, user: { id: user.id, name: user.name, is_admin: user.is_admin }, userId: user.id };
 }

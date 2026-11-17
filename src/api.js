@@ -26,7 +26,7 @@ export async function api(path, token, { method = 'GET', body } = {}) {
     const renewed = res.headers.get('X-Session-Token');
     if (renewed && token) saveToken(renewed);
     const data = await res.json().catch(() => ({}));
-    if (res.status === 401 && !path.startsWith('login')) throw new Unauthorized();
+    if (res.status === 401 && !path.startsWith('login')) throw new Unauthorized(`${path}: ${data.reason || 'Nicht angemeldet'}`);
     if (!res.ok) throw new Error(data.error || `Fehler ${res.status}`);
     return data;
 }

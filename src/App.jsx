@@ -8,18 +8,21 @@ export default function App() {
     const [token, setToken] = useState(loadToken);
     const [me, setMe] = useState(null);
     const [error, setError] = useState('');
+    // Why the server sent the person back to the login, shown there.
+    const [kicked, setKicked] = useState('');
 
-    const login = (t) => { saveToken(t); setToken(t); };
-    const logout = useCallback(() => { saveToken(''); setToken(''); setMe(null); }, []);
+    const login = (t) => { saveToken(t); setToken(t); setKicked(''); };
+    // `reason` only when the server refused; the Abmelden button passes a click event.
+    const logout = useCallback((reason) => { saveToken(''); setToken(''); setMe(null); setKicked(typeof reason === 'string' ? reason : ''); }, []);
 
     const loadMe = useCallback(() => api('me', token).then(setMe), [token]);
 
     useEffect(() => {
         if (!token) return;
-        loadMe().catch((e) => (e instanceof Unauthorized ? logout() : setError(e.message)));
+        loadMe().catch((e) => (e instanceof Unauthorized ? logout(e.message) : setError(e.message)));
     }, [token, loadMe, logout]);
 
-    if (!token) return <Login onLogin={login} />;
+    if (!token) return <Login onLogin={login} notice={kicked} />;
     if (error) return <p className="p-6 text-sm text-expense">{error}</p>;
     if (!me) return <p className="py-24 text-center text-muted">Lade …</p>;
 

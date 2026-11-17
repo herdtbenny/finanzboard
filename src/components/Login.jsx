@@ -6,7 +6,7 @@ const LAST_NAME = 'finanzboard-name';
 const lastName = () => { try { return localStorage.getItem(LAST_NAME) || ''; } catch { return ''; } };
 const rememberName = (n) => { try { localStorage.setItem(LAST_NAME, n.trim()); } catch { /* private mode */ } };
 
-export default function Login({ onLogin }) {
+export default function Login({ onLogin, notice }) {
     // The name is always required; the last one used on this device is filled in.
     const [name, setName] = useState(lastName);
     const [password, setPassword] = useState('');
@@ -60,6 +60,7 @@ export default function Login({ onLogin }) {
                     </button>
                 </form>
                 {error && <p className="text-center text-sm text-expense">{error}</p>}
+                {!error && notice && <p className="text-center text-xs text-muted">Abgemeldet – {notice}</p>}
             </div>
         </main>
     );
